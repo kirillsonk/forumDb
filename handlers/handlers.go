@@ -1,18 +1,20 @@
 package handlers
 
 import (
-	"github.com/Grisha23/ForumsApi/models"
-	//"ForumsApi/models"
+	// "github.com/Grisha23/ForumsApi/models"
+	"ForumsApi/models"
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/lib/pq"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/gorilla/mux"
+	"github.com/lib/pq"
 )
+
 var globalCount = 0
 
 const (
@@ -58,11 +60,10 @@ func getUser(nickname string, t *sql.Tx) (*models.User, error) {
 	}
 	var row *sql.Row
 	//if t == nil {
-		row = db.QueryRow("SELECT about,email,fullname,nickname FROM users WHERE nickname=$1", nickname)
+	row = db.QueryRow("SELECT about,email,fullname,nickname FROM users WHERE nickname=$1", nickname)
 	//} else {
 	//	row = t.QueryRow("SELECT about,email,fullname,nickname FROM users WHERE nickname=$1", nickname)
 	//}
-
 
 	user := models.User{}
 
@@ -75,10 +76,12 @@ func getUser(nickname string, t *sql.Tx) (*models.User, error) {
 	return &user, nil
 }
 
-func sendError(errText string, statusCode int, w *http.ResponseWriter) ([]byte, error){
-	e := new(models.Error)
+func sendError(errText string, statusCode int, w *http.ResponseWriter) ([]byte, error) {
+	// e := new(models.Error)
+	var e models.Error
 	e.Message = errText
-	resp, _ := json.Marshal(e)
+	// resp, _ := json.Marshal(e)
+	resp, _ := e.MarshalJSON()
 
 	// Проверка err json
 
@@ -89,15 +92,15 @@ func sendError(errText string, statusCode int, w *http.ResponseWriter) ([]byte, 
 	return resp, nil
 }
 
-func UserProfile(w http.ResponseWriter, r *http.Request)  {
+func UserProfile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	nickname := vars["nickname"]
 
-	if r.Method == http.MethodGet{
+	if r.Method == http.MethodGet {
 		user, err := getUser(nickname, nil)
 
 		if err != nil {
-			sendError("Can't find user with nickname " + nickname + "\n", 404, &w)
+			sendError("Can't find user with nickname "+nickname+"\n", 404, &w)
 			return
 		}
 
@@ -119,25 +122,25 @@ func UserProfile(w http.ResponseWriter, r *http.Request)  {
 
 	userUpdate := models.User{}
 
-	err = json.Unmarshal(body, &userUpdate)
+	// err = json.Unmarshal(body, &userUpdate)
+	err = userUpdate.UnmarshalJSON(body)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-
 	about := false
 	fullname := false
 	email := false
 
-	if userUpdate.About != ""{
+	if userUpdate.About != "" {
 		about = true
 	}
-	if userUpdate.FullName != ""{
+	if userUpdate.FullName != "" {
 		fullname = true
 	}
-	if userUpdate.Email != ""{
+	if userUpdate.Email != "" {
 		email = true
 	}
 
@@ -145,10 +148,12 @@ func UserProfile(w http.ResponseWriter, r *http.Request)  {
 		user, err := getUser(nickname, nil)
 
 		if err != nil {
-			sendError("Can't find prifile with id " + nickname + "\n", 404, &w)
+			sendError("Can't find prifile with id "+nickname+"\n", 404, &w)
 		}
 
-		resp, _ := json.Marshal(user)
+		// resp, _ := json.Marshal(user)
+		resp, _ := user.MarshalJSON()
+
 		w.Header().Set("content-type", "application/json")
 
 		w.Write(resp)
@@ -185,14 +190,14 @@ func UserProfile(w http.ResponseWriter, r *http.Request)  {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			sendError("Can't find prifile with id " + nickname + "\n", 404, &w)
+			sendError("Can't find prifile with id "+nickname+"\n", 404, &w)
 			return
 		}
 
 		errorName := err.(*pq.Error).Code.Name()
 
-		if errorName == "unique_violation"{
-			sendError("Can't change prifile with id " + nickname + "\n", 409, &w)
+		if errorName == "unique_violation" {
+			sendError("Can't change prifile with id "+nickname+"\n", 409, &w)
 			return
 		}
 
@@ -200,7 +205,8 @@ func UserProfile(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 
-	resp, _ := json.Marshal(userUpdate)
+	// resp, _ := json.Marshal(userUpdate)
+	resp, _ := userUpdate.MarshalJSON()
 	w.Header().Set("content-type", "application/json")
 
 	w.Write(resp)
@@ -214,7 +220,7 @@ curl -i --header "Content-Type: application/json" --request POST --data '{"about
 
 */
 
-func UserCreate(w http.ResponseWriter, r *http.Request)  {
+func UserCreate(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	nickname := vars["nickname"]
 
@@ -227,7 +233,8 @@ func UserCreate(w http.ResponseWriter, r *http.Request)  {
 	//}
 
 	user := models.User{}
-	err := json.Unmarshal(body, &user)
+	// err := json.Unmarshal(body, &user)
+	err := user.UnmarshalJSON(body)
 	user.NickName = nickname
 
 	//if err != nil {
@@ -240,7 +247,7 @@ func UserCreate(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 
-	t,err := db.Begin()
+	t, err := db.Begin()
 
 	if err != nil {
 		fmt.Println("db.begin ", err.Error())
@@ -266,12 +273,12 @@ func UserCreate(w http.ResponseWriter, r *http.Request)  {
 	if err != nil {
 		errorName := err.(*pq.Error).Code.Name()
 
-		if errorName == "unique_violation"{
+		if errorName == "unique_violation" {
 			users := make([]models.User, 0)
 
 			rows, err := db.Query("SELECT * FROM users WHERE nickname=$1 OR email=$2", user.NickName, user.Email)
 
-			if err != nil{
+			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -291,6 +298,7 @@ func UserCreate(w http.ResponseWriter, r *http.Request)  {
 			rows.Close()
 
 			resp, _ := json.Marshal(users)
+			// resp, _ := users.MarshalJSON() //Тут массив json надо менять модельки
 			w.Header().Set("content-type", "application/json")
 
 			w.WriteHeader(http.StatusConflict)
@@ -304,8 +312,8 @@ func UserCreate(w http.ResponseWriter, r *http.Request)  {
 
 	}
 
-
-	resp, err := json.Marshal(user)
+	// resp, err := json.Marshal(user)
+	resp, err := user.MarshalJSON()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -325,8 +333,8 @@ func UserCreate(w http.ResponseWriter, r *http.Request)  {
 curl -i --header "Content-Type: application/json" --request POST --data '{"about":"text about user" , "email": "myemail@ddf.ru", "fullname": "Grigory"}' http://127.0.0.1:8080/user/grisha23/create
 
 */
-func ThreadVote(w http.ResponseWriter, r *http.Request)  {
-	if r.Method != http.MethodPost{
+func ThreadVote(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
 		return
 	}
 
@@ -361,25 +369,26 @@ func ThreadVote(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 
-	err = json.Unmarshal(body, &vote)
+	// err = json.Unmarshal(body, &vote)
+	err = vote.UnmarshalJSON(body)
 
 	thrId, err := strconv.Atoi(slugOrId)
 
 	if err != nil {
-		_,err = t.Exec("INSERT INTO votes(nickname, voice, thread) VALUES ($1,$2, (SELECT id FROM threads WHERE slug=$3)) " +
-			"ON CONFLICT (nickname, thread) DO " +
+		_, err = t.Exec("INSERT INTO votes(nickname, voice, thread) VALUES ($1,$2, (SELECT id FROM threads WHERE slug=$3)) "+
+			"ON CONFLICT (nickname, thread) DO "+
 			"UPDATE SET voice=$2",
 			vote.Nickname, vote.Voice, slugOrId)
 	} else {
-		_,err = t.Exec("INSERT INTO votes(nickname, voice, thread) VALUES ($1,$2,$3) " +
-			"ON CONFLICT (nickname, thread) DO " +
+		_, err = t.Exec("INSERT INTO votes(nickname, voice, thread) VALUES ($1,$2,$3) "+
+			"ON CONFLICT (nickname, thread) DO "+
 			"UPDATE SET voice=$2",
 			vote.Nickname, vote.Voice, thrId)
 	}
 
 	if err != nil {
 		if err.(*pq.Error).Code.Name() == "foreign_key_violation" {
-			sendError("Can't find user with id " + slugOrId + "\n", 404, &w)
+			sendError("Can't find user with id "+slugOrId+"\n", 404, &w)
 			return
 		}
 	}
@@ -389,13 +398,12 @@ func ThreadVote(w http.ResponseWriter, r *http.Request)  {
 	thr, err := getThread(slugOrId, nil)
 
 	if err != nil {
-		sendError("Can't find thread with id " + slugOrId + "\n", 404, &w)
+		sendError("Can't find thread with id "+slugOrId+"\n", 404, &w)
 		return
 	}
 
-
-
-	resp, _ := json.Marshal(thr)
+	// resp, _ := json.Marshal(thr)
+	resp, _ := thr.MarshalJSON()
 	w.Header().Set("content-type", "application/json")
 
 	w.Write(resp)
@@ -414,7 +422,7 @@ func ThreadPosts(w http.ResponseWriter, r *http.Request) {
 	thr, err := getThread(slugOrId, nil)
 
 	if err != nil {
-		sendError("Can't find thread with id " + slugOrId + "\n", 404, &w)
+		sendError("Can't find thread with id "+slugOrId+"\n", 404, &w)
 		return
 	}
 
@@ -423,9 +431,9 @@ func ThreadPosts(w http.ResponseWriter, r *http.Request) {
 	descVal := r.URL.Query().Get("desc")
 	sortVal := r.URL.Query().Get("sort")
 
-	var since= false
-	var desc= false
-	var limit= false
+	var since = false
+	var desc = false
+	var limit = false
 
 	if limitVal == "" {
 		limitVal = " ALL"
@@ -514,7 +522,7 @@ func ThreadPosts(w http.ResponseWriter, r *http.Request) {
 			limitAddition = " WHERE rank <= " + limitVal
 		}
 
-		query :="SELECT author,created,forum,id,isedited,message,parent,thread FROM (" +
+		query := "SELECT author,created,forum,id,isedited,message,parent,thread FROM (" +
 			" SELECT author,id_array,created,forum,id,isedited,message,parent,thread, " +
 			" dense_rank() over (ORDER BY id_array[1] " + descflag + " ) AS rank " +
 			" FROM posts WHERE thread=$1 " + sinceAddition + " ) AS tree " + limitAddition + " " + sortAddition
@@ -531,7 +539,7 @@ func ThreadPosts(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 	posts := make([]models.Post, 0)
 	var i = 0
-	for rows.Next(){
+	for rows.Next() {
 		i++
 		post := models.Post{}
 
@@ -551,17 +559,18 @@ func ThreadPosts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")
 
 	resp, _ := json.Marshal(posts)
+	// resp, _ := posts.MarshalJSON() //Массив, поменять модель
 
 	w.Write(resp)
 
 	return
 }
 
-func ThreadDetails(w http.ResponseWriter, r *http.Request){
+func ThreadDetails(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	slugOrId := vars["slug_or_id"]
 
-	if r.Method == http.MethodPost{
+	if r.Method == http.MethodPost {
 
 		body, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
@@ -573,17 +582,19 @@ func ThreadDetails(w http.ResponseWriter, r *http.Request){
 
 		thr := models.Thread{}
 
-		err = json.Unmarshal(body, &thr)
+		// err = json.Unmarshal(body, &thr)
+		err = thr.UnmarshalJSON(body)
 
-		if thr.Title == "" && thr.Message == ""{
+		if thr.Title == "" && thr.Message == "" {
 			existThr, err := getThread(slugOrId, nil)
 
 			if err != nil {
-				sendError("Can't find thread with id " + slugOrId + "\n", 404, &w)
+				sendError("Can't find thread with id "+slugOrId+"\n", 404, &w)
 				return
 			}
 
-			resp, err := json.Marshal(existThr)
+			// resp, err := json.Marshal(existThr)
+			resp, err := existThr.MarshalJSON()
 			w.Header().Set("content-type", "application/json")
 
 			w.Write(resp)
@@ -624,14 +635,15 @@ func ThreadDetails(w http.ResponseWriter, r *http.Request){
 		query := "UPDATE threads SET " + messageAddition + many + titleAddition + " WHERE " + idenAdditional + " RETURNING *"
 		row = db.QueryRow(query)
 
-		err = row.Scan(&thr.Id, &thr.Author, &thr.Created, &thr.Forum,  &thr.Message, &thr.Slug, &thr.Title, &thr.Votes)
+		err = row.Scan(&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &thr.Slug, &thr.Title, &thr.Votes)
 
 		if err != nil {
-			sendError("Can't find thread with id " + slugOrId + "\n", 404, &w)
+			sendError("Can't find thread with id "+slugOrId+"\n", 404, &w)
 			return
 		}
 
-		resp, err := json.Marshal(thr)
+		// resp, err := json.Marshal(thr)
+		resp, err := thr.MarshalJSON()
 		w.Header().Set("content-type", "application/json")
 
 		w.Write(resp)
@@ -642,11 +654,12 @@ func ThreadDetails(w http.ResponseWriter, r *http.Request){
 	thr, err := getThread(slugOrId, nil)
 
 	if err != nil {
-		sendError("Can't find thread with id " + slugOrId + "\n", 404, &w)
+		sendError("Can't find thread with id "+slugOrId+"\n", 404, &w)
 		return
 	}
 
-	resp, _ := json.Marshal(thr)
+	// resp, _ := json.Marshal(thr)
+	resp, _ := thr.MarshalJSON()
 	w.Header().Set("content-type", "application/json")
 
 	w.Write(resp)
@@ -665,11 +678,11 @@ func getThread(slug string, t *sql.Tx) (*models.Thread, error) {
 	var row *sql.Row
 
 	//if t == nil {
-		if err != nil {
-			row = db.QueryRow("SELECT * FROM threads WHERE slug=$1;", slug)
-		} else {
-			row = db.QueryRow("SELECT * FROM threads WHERE id=$1;", thrId)
-		}
+	if err != nil {
+		row = db.QueryRow("SELECT * FROM threads WHERE slug=$1;", slug)
+	} else {
+		row = db.QueryRow("SELECT * FROM threads WHERE id=$1;", thrId)
+	}
 	//} else {
 	//	if err != nil {
 	//		row = t.QueryRow("SELECT * FROM threads WHERE slug=$1;", slug)
@@ -677,8 +690,6 @@ func getThread(slug string, t *sql.Tx) (*models.Thread, error) {
 	//		row = t.QueryRow("SELECT * FROM threads WHERE id=$1;", thrId)
 	//	}
 	//}
-
-
 
 	var sqlSlug sql.NullString
 
@@ -698,8 +709,8 @@ func getThread(slug string, t *sql.Tx) (*models.Thread, error) {
 	return thr, nil
 }
 
-func PostCreate(w http.ResponseWriter, r *http.Request)  {
-	if r.Method != http.MethodPost{
+func PostCreate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -723,8 +734,7 @@ func PostCreate(w http.ResponseWriter, r *http.Request)  {
 
 	posts := make([]models.Post, 0)
 
-	err = json.Unmarshal(body, &posts)
-
+	err = json.Unmarshal(body, &posts) // Массив json, модель
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -749,16 +759,17 @@ func PostCreate(w http.ResponseWriter, r *http.Request)  {
 
 	thr, err := getThread(slugOrId, nil)
 
-	if err != nil{
-		sendError("Can't find thread with id " + slugOrId + "\n", 404, &w)
+	if err != nil {
+		sendError("Can't find thread with id "+slugOrId+"\n", 404, &w)
 		return
 	}
 
 	defer t.Rollback()
 	if len(posts) == 0 {
-		data := make([]models.Post,0)
+		data := make([]models.Post, 0)
 
 		resp, err := json.Marshal(data)
+		// resp, err := data.MarshalJSON() // json не понял почему не работает
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -772,22 +783,18 @@ func PostCreate(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 
-
-
 	//var firstCreated time.Time
 	//var err error
 	//stmt, err := t.Prepare("INSERT INTO posts(author, forum, message, parent, thread, created) VALUES ($1,$2,$3,$4,$5,$6) RETURNING author,created,forum,id,isedited,message,parent,thread")
 
-
-	resQuery :=  "INSERT INTO posts(author, forum, message, parent, thread) VALUES "
+	resQuery := "INSERT INTO posts(author, forum, message, parent, thread) VALUES "
 
 	forumUsersInsert := "INSERT INTO forum_users(forum,author) VALUES "
 
 	var subQuery []string
 	var forumUsersSubQuery []string
 
-	for _, p := range posts{
-
+	for _, p := range posts {
 
 		values := fmt.Sprintf("('%s', '%s', '%s', %d, %d) ", p.Author, thr.Forum, p.Message, p.Parent, thr.Id)
 
@@ -811,7 +818,6 @@ func PostCreate(w http.ResponseWriter, r *http.Request)  {
 
 		//_,err := t.Exec("INSERT INTO forum_users(forum,author) VALUES ($1,$2) ON CONFLICT DO NOTHING", thr.Forum, p.Author)
 
-
 		forumUsersValues := fmt.Sprintf("('%s', '%s') ", thr.Forum, p.Author)
 
 		forumUsersSubQuery = append(forumUsersSubQuery, forumUsersValues)
@@ -821,7 +827,6 @@ func PostCreate(w http.ResponseWriter, r *http.Request)  {
 		//}
 
 		//data = append(data, newPost)
-
 
 	}
 
@@ -866,15 +871,13 @@ func PostCreate(w http.ResponseWriter, r *http.Request)  {
 	//	return
 	//}
 
-
-
-	data := make([]models.Post,0)
+	data := make([]models.Post, 0)
 
 	for rows.Next() {
 		newPost := models.Post{}
 
-		err := rows.Scan(&newPost.Author,  &newPost.Created, &newPost.Forum, &newPost.Id, &newPost.IsEdited, &newPost.Message,
-				&newPost.Parent, &newPost.Thread)
+		err := rows.Scan(&newPost.Author, &newPost.Created, &newPost.Forum, &newPost.Id, &newPost.IsEdited, &newPost.Message,
+			&newPost.Parent, &newPost.Thread)
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -885,6 +888,7 @@ func PostCreate(w http.ResponseWriter, r *http.Request)  {
 	}
 
 	resp, err := json.Marshal(data)
+	// resp, err := data.MarshalJSON() //json не понимаю почему не работает
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -906,9 +910,8 @@ curl -i --header "Content-Type: application/json" --request POST --data '[{"auth
 
 */
 
-
-func ServiceStatus(w http.ResponseWriter, r *http.Request)  {
-	if r.Method != http.MethodGet{
+func ServiceStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
 		return
 	}
 
@@ -923,7 +926,8 @@ func ServiceStatus(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 
-	resp, _ := json.Marshal(status)
+	// resp, _ := json.Marshal(status)
+	resp, err := status.MarshalJSON()
 	w.Header().Set("content-type", "application/json")
 
 	w.WriteHeader(http.StatusOK)
@@ -933,8 +937,8 @@ func ServiceStatus(w http.ResponseWriter, r *http.Request)  {
 	return
 }
 
-func ServiceClear(w http.ResponseWriter, r *http.Request)  {
-	if r.Method != http.MethodPost{
+func ServiceClear(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -946,7 +950,7 @@ func ServiceClear(w http.ResponseWriter, r *http.Request)  {
 	return
 }
 
-func PostDetails(w http.ResponseWriter, r *http.Request){
+func PostDetails(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	id := vars["id"]
@@ -964,29 +968,31 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 
 		post := new(models.Post)
 
-		err = json.Unmarshal(body, post)
+		// err = json.Unmarshal(body, post)
+		err = post.UnmarshalJSON(body)
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		if err != nil{
-			sendError( "Can't find post with id " + id + "\n", 404, &w)
+		if err != nil {
+			sendError("Can't find post with id "+id+"\n", 404, &w)
 			return
 		}
 
 		if post.Message == "" {
 			row := db.QueryRow("SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE id=$1", id)
 
-			err = row.Scan(&post.Author,&post.Created,&post.Forum,&post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
+			err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
 
-			if err != nil{
+			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
-			resp, _ := json.Marshal(post)
+			// resp, _ := json.Marshal(post)
+			resp, _ := post.MarshalJSON()
 			w.Header().Set("content-type", "application/json")
 
 			w.Write(resp)
@@ -994,14 +1000,15 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 			return
 		}
 		row := db.QueryRow("UPDATE posts SET message=$1, isedited=true WHERE id=$2 RETURNING author,created,forum,id,isedited,message,parent,thread", post.Message, id)
-		err = row.Scan(&post.Author,&post.Created,&post.Forum,&post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
+		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
 
 		if err != nil {
 			sendError("Can't find post with id "+id+"\n", 404, &w)
 			return
 		}
 
-		resp, _ := json.Marshal(post)
+		// resp, _ := json.Marshal(post)
+		resp, _ := post.MarshalJSON()
 		w.Header().Set("content-type", "application/json")
 
 		w.Write(resp)
@@ -1011,7 +1018,6 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 	postDetail := models.PostDetail{}
 
 	//query := "SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE id=$1; "
-
 
 	//post := new(models.Post)
 	//row := db.QueryRow("SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE id=$1;", id)
@@ -1029,7 +1035,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 
 	var oblectsArr []string
 	objects := strings.Split(related, ",")
-	for index := range objects  {
+	for index := range objects {
 		item := objects[index]
 		oblectsArr = append(oblectsArr, item)
 	}
@@ -1096,7 +1102,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 		postDetail.Forum = forum
 		postDetail.Post = post
 
-		} else if !relUser && relThread && !relForum {
+	} else if !relUser && relThread && !relForum {
 
 		query := "SELECT p.author,p.created,p.forum,p.id,p.isedited,p.message,p.parent,p.thread, t.id, t.author, t.created, t.forum, t.message, t.slug, t.title, t.votes FROM posts p " +
 			"JOIN threads t ON p.id=$1 AND p.thread=t.id"
@@ -1106,7 +1112,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 		post := new(models.Post)
 
 		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
-			&thr.Id, &thr.Author, &thr.Created, &thr.Forum,  &thr.Message, &sqlSlug, &thr.Title, &thr.Votes)
+			&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &sqlSlug, &thr.Title, &thr.Votes)
 
 		if !sqlSlug.Valid {
 			thr.Slug = ""
@@ -1114,11 +1120,10 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 			thr.Slug = sqlSlug.String
 		}
 
-
 		postDetail.Thread = thr
 		postDetail.Post = post
 
-		} else if !relUser && relThread && relForum {
+	} else if !relUser && relThread && relForum {
 
 		query := "SELECT p.author,p.created,p.forum,p.id,p.isedited,p.message,p.parent,p.thread, t.id, t.author, t.created, t.forum, t.message, t.slug, t.title, t.votes,  f.posts, f.slug, f.threads, f.title, f.author  FROM posts p " +
 			"JOIN threads t ON p.id=$1 AND p.thread=t.id JOIN forums f ON p.forum=f.slug"
@@ -1129,7 +1134,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 		post := new(models.Post)
 
 		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
-			&thr.Id, &thr.Author, &thr.Created, &thr.Forum,  &thr.Message, &sqlSlug, &thr.Title, &thr.Votes,
+			&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &sqlSlug, &thr.Title, &thr.Votes,
 			&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
 
 		if !sqlSlug.Valid {
@@ -1138,12 +1143,11 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 			thr.Slug = sqlSlug.String
 		}
 
-
 		postDetail.Thread = thr
 		postDetail.Post = post
 		postDetail.Forum = forum
 
-		} else if relUser && !relThread && !relForum {
+	} else if relUser && !relThread && !relForum {
 
 		query := "SELECT p.author,p.created,p.forum,p.id,p.isedited,p.message,p.parent,p.thread, u.about, u.email, u.fullname, u.nickname FROM posts p " +
 			"JOIN users u ON p.id=$1 AND u.nickname=p.author"
@@ -1158,7 +1162,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 		postDetail.Author = user
 		postDetail.Post = post
 
-		} else if relUser && !relThread && relForum {
+	} else if relUser && !relThread && relForum {
 
 		query := "SELECT p.author,p.created,p.forum,p.id,p.isedited,p.message,p.parent,p.thread, u.about, u.email, u.fullname, u.nickname, f.posts, f.slug, f.threads, f.title, f.author   FROM posts p " +
 			"JOIN users u ON p.id=$1 AND u.nickname=p.author " +
@@ -1177,7 +1181,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 		postDetail.Post = post
 		postDetail.Forum = forum
 
-		} else if relUser && relThread && !relForum {
+	} else if relUser && relThread && !relForum {
 
 		query := "SELECT p.author,p.created,p.forum,p.id,p.isedited,p.message,p.parent,p.thread, u.about, u.email, u.fullname, u.nickname,  t.id, t.author, t.created, t.forum, t.message, t.slug, t.title, t.votes FROM posts p " +
 			"JOIN users u ON p.id=$1 AND u.nickname=p.author " +
@@ -1190,7 +1194,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 
 		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
 			&user.About, &user.Email, &user.FullName, &user.NickName,
-			&thr.Id, &thr.Author, &thr.Created, &thr.Forum,  &thr.Message, &sqlSlug, &thr.Title, &thr.Votes)
+			&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &sqlSlug, &thr.Title, &thr.Votes)
 
 		if !sqlSlug.Valid {
 			thr.Slug = ""
@@ -1198,12 +1202,11 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 			thr.Slug = sqlSlug.String
 		}
 
-
 		postDetail.Author = user
 		postDetail.Post = post
 		postDetail.Thread = thr
 
-		} else if relUser && relThread && relForum {
+	} else if relUser && relThread && relForum {
 
 		query := "SELECT p.author,p.created,p.forum,p.id,p.isedited,p.message,p.parent,p.thread, u.about, u.email, u.fullname, u.nickname,  t.id, t.author, t.created, t.forum, t.message, t.slug, t.title, t.votes , f.posts, f.slug, f.threads, f.title, f.author FROM posts p " +
 			"JOIN users u ON p.id=$1 AND u.nickname=p.author " +
@@ -1218,7 +1221,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 
 		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
 			&user.About, &user.Email, &user.FullName, &user.NickName,
-			&thr.Id, &thr.Author, &thr.Created, &thr.Forum,  &thr.Message, &sqlSlug, &thr.Title, &thr.Votes,
+			&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &sqlSlug, &thr.Title, &thr.Votes,
 			&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
 
 		if !sqlSlug.Valid {
@@ -1227,14 +1230,12 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 			thr.Slug = sqlSlug.String
 		}
 
-
 		postDetail.Author = user
 		postDetail.Post = post
 		postDetail.Thread = thr
 		postDetail.Forum = forum
 
-		}
-
+	}
 
 	if err != nil {
 		fmt.Println(err.Error())
@@ -1250,7 +1251,6 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 	//	sendError("Can't find post with id "+id+"\n", 404, &w)
 	//	return
 	//}
-
 
 	//fmt.Println("before")
 	//for rows.Next(){
@@ -1302,9 +1302,6 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 	//
 	//}
 
-
-
-
 	//row := db.QueryRow("SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE id=$1", id)
 
 	//post := models.Post{}
@@ -1315,8 +1312,6 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 	//	sendError( "Can't find post with id " + id + "\n", 404, &w)
 	//	return
 	//}
-
-
 
 	resp, _ := json.Marshal(postDetail)
 	w.Header().Set("content-type", "application/json")
@@ -1332,8 +1327,8 @@ curl -i --header "Content-Type: application/json" --request POST --data '{"messa
 
 */
 
-func ForumUsers(w http.ResponseWriter, r *http.Request){
-	if r.Method != http.MethodGet{
+func ForumUsers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
 		return
 	}
 
@@ -1365,10 +1360,9 @@ func ForumUsers(w http.ResponseWriter, r *http.Request){
 	frm, _ := getForum(slug, nil)
 
 	if frm == nil {
-		sendError("Can't find forum with slug " + slug + "\n", 404, &w)
+		sendError("Can't find forum with slug "+slug+"\n", 404, &w)
 		return
 	}
-
 
 	if !limit && !since && !desc {
 		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 ORDER BY nickname ASC"
@@ -1395,7 +1389,7 @@ func ForumUsers(w http.ResponseWriter, r *http.Request){
 		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 ORDER BY nickname DESC LIMIT $2"
 		rows, err = db.Query(query, slug, limitVal)
 
-	} else if limit && since && !desc {//here
+	} else if limit && since && !desc { //here
 		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 AND u.nickname>$2 ORDER BY nickname ASC LIMIT $3"
 
 		rows, err = db.Query(query, slug, sinceVal, limitVal)
@@ -1408,7 +1402,7 @@ func ForumUsers(w http.ResponseWriter, r *http.Request){
 	}
 
 	if err != nil {
-		sendError( "Can't find forum with slug " + slug + "\n", 404, &w)
+		sendError("Can't find forum with slug "+slug+"\n", 404, &w)
 		return
 	}
 
@@ -1429,8 +1423,8 @@ func ForumUsers(w http.ResponseWriter, r *http.Request){
 
 	defer rows.Close()
 
-
 	resp, _ := json.Marshal(users)
+	// resp, _ := users.MarshalJSON() //массив json менять модель
 	w.Header().Set("content-type", "application/json")
 
 	w.Write(resp)
@@ -1443,7 +1437,7 @@ curl -i --header "Content-Type: application/json" --request GET http://127.0.0.1
 
 */
 
-func ForumThreads(w http.ResponseWriter, r *http.Request){
+func ForumThreads(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		return
 	}
@@ -1490,7 +1484,7 @@ func ForumThreads(w http.ResponseWriter, r *http.Request){
 		rows, err = db.Query("SELECT * FROM threads WHERE forum = $1 AND created <= $2 ORDER BY created DESC;", slug, sinceVal)
 	} else if limit && since && desc {
 		rows, err = db.Query("SELECT * FROM threads WHERE forum = $1 AND created <= $2 ORDER BY created DESC LIMIT $3;", slug, sinceVal, limitVal)
-	} else if limit && since && !desc{
+	} else if limit && since && !desc {
 		rows, err = db.Query("SELECT * FROM threads WHERE forum = $1 AND created >= $2 ORDER BY created LIMIT $3;", slug, sinceVal, limitVal)
 	} else if !limit && !since && !desc {
 		rows, err = db.Query("SELECT * FROM threads WHERE forum = $1 ORDER BY created;", slug)
@@ -1512,7 +1506,7 @@ func ForumThreads(w http.ResponseWriter, r *http.Request){
 	for rows.Next() {
 		flag = true
 		thr := models.Thread{}
-		err := rows.Scan(&thr.Id, &thr.Author, &thr.Created, &thr.Forum,  &thr.Message, &nullSlug, &thr.Title, &thr.Votes)
+		err := rows.Scan(&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &nullSlug, &thr.Title, &thr.Votes)
 
 		if nullSlug.Valid {
 			thr.Slug = nullSlug.String
@@ -1531,15 +1525,15 @@ func ForumThreads(w http.ResponseWriter, r *http.Request){
 	if flag == false {
 		frm, _ := getForum(slug, nil)
 		if frm == nil {
-			sendError("Can't find forum with slug " + slug + "\n", 404, &w)
+			sendError("Can't find forum with slug "+slug+"\n", 404, &w)
 			return
 		}
 	}
 
 	defer rows.Close()
 
-
 	resp, _ := json.Marshal(thrs)
+	// resp, _ := thrs.MarshalJSON() // менять модель json массив
 	w.Header().Set("content-type", "application/json")
 
 	w.Write(resp)
@@ -1547,15 +1541,14 @@ func ForumThreads(w http.ResponseWriter, r *http.Request){
 	return
 }
 
-func getForum(slugOrId string, t *sql.Tx) (*models.Forum,error) {
+func getForum(slugOrId string, t *sql.Tx) (*models.Forum, error) {
 	forum := models.Forum{}
 	var err error
 	//if t == nil {
-		err = db.QueryRow("SELECT * FROM forums WHERE slug=$1", slugOrId).Scan(&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
+	err = db.QueryRow("SELECT * FROM forums WHERE slug=$1", slugOrId).Scan(&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
 	//} else {
 	//	err = t.QueryRow("SELECT * FROM forums WHERE slug=$1", slugOrId).Scan(&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
 	//}
-
 
 	if err != nil {
 		return nil, err
@@ -1571,17 +1564,18 @@ curl -i --header "Content-Type: application/json" --request GET http://127.0.0.1
 
 */
 
-func ForumDetails(w http.ResponseWriter, r *http.Request){
+func ForumDetails(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	slug := vars["slug"]
 	frm, err := getForum(slug, nil)
 
 	if err != nil {
-		sendError( "Can't find forum with slug " + slug + "\n", 404, &w)
+		sendError("Can't find forum with slug "+slug+"\n", 404, &w)
 		return
 	}
 
-	resp, err := json.Marshal(frm)
+	// resp, err := json.Marshal(frm)
+	resp, err := frm.MarshalJSON()
 
 	if err != nil {
 		return
@@ -1597,7 +1591,7 @@ FORUM DETAILS
 curl -i --header "Content-Type: application/json" --request GET http://127.0.0.1:8080/forum/stories-about/details
 */
 
-func ThreadCreate(w http.ResponseWriter, r *http.Request){
+func ThreadCreate(w http.ResponseWriter, r *http.Request) {
 	body, readErr := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 
@@ -1607,7 +1601,6 @@ func ThreadCreate(w http.ResponseWriter, r *http.Request){
 	}
 
 	var err error
-
 
 	t, err := db.Begin()
 
@@ -1636,11 +1629,11 @@ func ThreadCreate(w http.ResponseWriter, r *http.Request){
 
 	var row *sql.Row
 	if thr.Slug == "" {
-		row = t.QueryRow("INSERT INTO threads(author, created, forum, message, title) VALUES ($1, $2, " +
+		row = t.QueryRow("INSERT INTO threads(author, created, forum, message, title) VALUES ($1, $2, "+
 			"(SELECT slug FROM forums WHERE slug=$3), $4, $5) RETURNING *", thr.Author, thr.Created, slug,
 			thr.Message, thr.Title)
 	} else {
-		row = t.QueryRow("INSERT INTO threads(author, created, forum, message, title, slug) VALUES ($1, $2, " +
+		row = t.QueryRow("INSERT INTO threads(author, created, forum, message, title, slug) VALUES ($1, $2, "+
 			"(SELECT slug FROM forums WHERE slug=$3), $4, $5, $6) RETURNING *", thr.Author, thr.Created, slug,
 			thr.Message, thr.Title, thr.Slug)
 	}
@@ -1653,18 +1646,19 @@ func ThreadCreate(w http.ResponseWriter, r *http.Request){
 		fmt.Println(err.Error())
 		errorName := err.(*pq.Error).Code.Name()
 
-		if errorName == "foreign_key_violation" || errorName == "not_null_violation"{
-			sendError( "Can't find user or forum \n", 404, &w)
+		if errorName == "foreign_key_violation" || errorName == "not_null_violation" {
+			sendError("Can't find user or forum \n", 404, &w)
 			return
 		}
 
-		if errorName == "unique_violation"{
+		if errorName == "unique_violation" {
 			existThr, _ := getThread(thr.Slug, nil)
 
 			w.Header().Set("content-type", "application/json")
 
 			w.WriteHeader(http.StatusConflict)
-			resp, _ := json.Marshal(existThr)
+			// resp, _ := json.Marshal(existThr)
+			resp, _ := existThr.MarshalJSON()
 
 			w.Write(resp)
 			return
@@ -1691,8 +1685,8 @@ func ThreadCreate(w http.ResponseWriter, r *http.Request){
 	}
 	t.Commit()
 
-
-	resp, _:= json.Marshal(newThr)
+	// resp, _ := json.Marshal(newThr)
+	resp, _ := newThr.MarshalJSON()
 	w.Header().Set("content-type", "application/json")
 
 	w.WriteHeader(http.StatusCreated)
@@ -1706,7 +1700,7 @@ CREATE THREAD
 curl -i --header "Content-Type: application/json" --request POST --data '{"author":"Grisha23","message":"DWjn waonda owadndn wa awn n3342", "title": "Thread1"}'   http://127.0.0.1:8080/forum/stories-about/create
 */
 
-func ForumCreate(w http.ResponseWriter, r *http.Request){
+func ForumCreate(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		return
 	}
@@ -1724,7 +1718,7 @@ func ForumCreate(w http.ResponseWriter, r *http.Request){
 
 	defer t.Rollback()
 
-	_,err = t.Exec("SET LOCAL synchronous_commit TO OFF")
+	_, err = t.Exec("SET LOCAL synchronous_commit TO OFF")
 
 	if err != nil {
 		fmt.Println("set local ", err.Error())
@@ -1733,12 +1727,13 @@ func ForumCreate(w http.ResponseWriter, r *http.Request){
 	}
 
 	forum := new(models.Forum)
-	err = json.Unmarshal(body, forum)
+	// err = json.Unmarshal(body, forum)
+	err = forum.UnmarshalJSON(body)
 
 	existUser, _ := getUser(forum.User, nil)
 
 	if existUser == nil {
-		sendError( "Can't find user with name " + forum.User + "\n", 404, &w)
+		sendError("Can't find user with name "+forum.User+"\n", 404, &w)
 		return
 	}
 
@@ -1749,7 +1744,7 @@ func ForumCreate(w http.ResponseWriter, r *http.Request){
 	if err != nil {
 		errorName := err.(*pq.Error).Code.Name()
 		if errorName == "foreign_key_violation" {
-			sendError( "Can't find user with name " + forum.User + "\n", 404, &w)
+			sendError("Can't find user with name "+forum.User+"\n", 404, &w)
 			return
 		}
 		if errorName == "unique_violation" {
@@ -1766,7 +1761,8 @@ func ForumCreate(w http.ResponseWriter, r *http.Request){
 			w.Header().Set("content-type", "application/json")
 
 			w.WriteHeader(http.StatusConflict)
-			resp, _ := json.Marshal(fr)
+			// resp, _ := json.Marshal(fr)
+			resp, _ := fr.MarshalJSON()
 
 			w.Write(resp)
 			return
@@ -1775,7 +1771,8 @@ func ForumCreate(w http.ResponseWriter, r *http.Request){
 
 	t.Commit()
 
-	resp, _ := json.Marshal(forum)
+	// resp, _ := json.Marshal(forum)
+	resp, _ := forum.MarshalJSON()
 
 	w.Header().Set("content-type", "application/json")
 
@@ -1792,4 +1789,3 @@ curl -i --header "Content-Type: application/json"   --request POST
 --data '{"slug":"stori123es-eabout","title":"Stoewries about som12ewe3ething",
 "user": "Gris21ha23"}'   http://127.0.0.1:8080/forum/create
 */
-
