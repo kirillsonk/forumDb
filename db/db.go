@@ -8,22 +8,24 @@ import (
 
 
 const (
-	//DbUser     = "docker"
-	//DbPassword = "docker"
-	//DbName     = "docker"
-	DbUser     = "tpforumsapi"
-	DbPassword = "222"
-	DbName = "forums_func"
-	//DbName = "forums"
+	user     = "Sonk"
+	password = "k123"
+	dbname   = "forumdb"
+	// user     = "docker"
+	// password = "docker"
+	// dbname   = "docker"
 )
 
 var db *sql.DB
 
 func InitDb() (*sql.DB, error) {
 	var err error
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
-		DbUser, DbPassword, DbName)
-	db, err = sql.Open("postgres", dbinfo)
+	psqlInfo := fmt.Sprintf("user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		user, password, dbname)
+
+	db, err = sql.Open("postgres", psqlInfo)
+
 	if err != nil {
 		panic(err)
 	}
@@ -32,44 +34,32 @@ func InitDb() (*sql.DB, error) {
 		panic(err)
 	}
 
-	init, err := ioutil.ReadFile("db/forum.sql")
+	init, err := ioutil.ReadFile("db/tables.sql")
 	_, err = db.Exec(string(init))
 
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("You connected to your database.")
-
+	fmt.Println("You connected to your database")
 	return db, nil
 }
 
-func DbQueryRow(query string, args []interface{}) (*sql.Row){
+func DbQueryRow(query string, args []interface{}) *sql.Row {
 	var row *sql.Row
-
 	row = db.QueryRow(query, args...)
-
 	return row
-
 }
 
 func DbQuery(query string, args []interface{}) (*sql.Rows, error) {
 	var err error
-
 	rows, err := db.Query(query, args...)
-
 	return rows, err
 }
 
-func DbExec(query string, args []interface{}) (error) {
-	//s := make([]interface{}, len(args))
-	//for i, v := range args {
-	//	s[i] = v
-	//}
+func DbExec(query string, args []interface{}) error {
 	var err error
-
 	t, err := db.Begin()
-
 	if err != nil {
 		fmt.Println(err.Error())
 		return err
@@ -84,7 +74,6 @@ func DbExec(query string, args []interface{}) (error) {
 
 	defer t.Rollback()
 
-
 	if args != nil {
 		_, err = t.Exec(query, args...)
 	} else {
@@ -92,11 +81,9 @@ func DbExec(query string, args []interface{}) (error) {
 	}
 
 	t.Commit()
-
 	return err
 }
 
-
-func GetLink()(*sql.DB){
+func GetLink() *sql.DB {
 	return db
 }

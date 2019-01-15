@@ -5,12 +5,12 @@ import (
 	"ForumsApi/internal/Errors"
 	"ForumsApi/models"
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/lib/pq"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/lib/pq"
 )
 
 func GetUser(nickname string) (*models.User, error) {
@@ -33,23 +33,21 @@ func GetUser(nickname string) (*models.User, error) {
 	return &user, nil
 }
 
-func UserProfile(w http.ResponseWriter, r *http.Request)  {
+func UserProfile(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "application/json")
 	vars := mux.Vars(r)
 	nickname := vars["nickname"]
 
-	if r.Method == http.MethodGet{
+	if r.Method == http.MethodGet {
 		user, err := GetUser(nickname)
 
 		if err != nil {
-			Errors.SendError("Can't find user with nickname " + nickname + "\n", 404, &w)
+			Errors.SendError("Can't find user with nickname "+nickname+"\n", 404, &w)
 			return
 		}
 
-		resp, _ := json.Marshal(user)
-		w.Header().Set("content-type", "application/json")
-
-		w.Write(resp)
-
+		resData, _ := user.MarshalJSON()
+		w.Write(resData)
 		return
 	}
 
@@ -62,26 +60,24 @@ func UserProfile(w http.ResponseWriter, r *http.Request)  {
 	}
 
 	userUpdate := models.User{}
-
-	err = json.Unmarshal(body, &userUpdate)
+	err = userUpdate.UnmarshalJSON(body)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-
 	about := false
 	fullname := false
 	email := false
 
-	if userUpdate.About != ""{
+	if userUpdate.About != "" {
 		about = true
 	}
-	if userUpdate.FullName != ""{
+	if userUpdate.FullName != "" {
 		fullname = true
 	}
-	if userUpdate.Email != ""{
+	if userUpdate.Email != "" {
 		email = true
 	}
 
@@ -89,14 +85,11 @@ func UserProfile(w http.ResponseWriter, r *http.Request)  {
 		user, err := GetUser(nickname)
 
 		if err != nil {
-			Errors.SendError("Can't find prifile with id " + nickname + "\n", 404, &w)
+			Errors.SendError("Can't find prifile with id "+nickname+"\n", 404, &w)
 		}
 
-		resp, _ := json.Marshal(user)
-		w.Header().Set("content-type", "application/json")
-
-		w.Write(resp)
-
+		resData, _ := user.MarshalJSON()
+		w.Write(resData)
 		return
 	}
 
@@ -130,14 +123,14 @@ func UserProfile(w http.ResponseWriter, r *http.Request)  {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			Errors.SendError("Can't find prifile with id " + nickname + "\n", 404, &w)
+			Errors.SendError("Can't find prifile with id "+nickname+"\n", 404, &w)
 			return
 		}
 
 		errorName := err.(*pq.Error).Code.Name()
 
-		if errorName == "unique_violation"{
-			Errors.SendError("Can't change prifile with id " + nickname + "\n", 409, &w)
+		if errorName == "unique_violation" {
+			Errors.SendError("Can't change prifile with id "+nickname+"\n", 409, &w)
 			return
 		}
 
@@ -145,34 +138,22 @@ func UserProfile(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 
-	resp, _ := json.Marshal(userUpdate)
-	w.Header().Set("content-type", "application/json")
-
-	w.Write(resp)
-
+	resData, _ := userUpdate.MarshalJSON()
+	w.Write(resData)
 	return
 }
 
-func UserCreate(w http.ResponseWriter, r *http.Request)  {
+func UserCreate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "application/json")
 	vars := mux.Vars(r)
 	nickname := vars["nickname"]
-
 	body, _ := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 
-	//if err != nil {
-	//	w.WriteHeader(http.StatusInternalServerError)
-	//	return
-	//}
-
 	user := models.User{}
-	err := json.Unmarshal(body, &user)
-	user.NickName = nickname
+	err := user.UnmarshalJSON(body)
 
-	//if err != nil {
-	//	w.WriteHeader(http.StatusInternalServerError)
-	//	return
-	//}
+	user.NickName = nickname
 
 	if user.NickName == "" || user.About == "" || user.Email == "" || user.FullName == "" {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -181,9 +162,7 @@ func UserCreate(w http.ResponseWriter, r *http.Request)  {
 
 	dbConn := db.GetLink()
 
-
-
-	t,err := dbConn.Begin()
+	t, err := dbConn.Begin()
 
 	if err != nil {
 		fmt.Println("set local begin ", err.Error())
@@ -193,7 +172,6 @@ func UserCreate(w http.ResponseWriter, r *http.Request)  {
 
 	_, err = t.Exec("SET LOCAL synchronous_commit TO OFF")
 
-
 	if err != nil {
 		fmt.Println("db.begin ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -201,7 +179,6 @@ func UserCreate(w http.ResponseWriter, r *http.Request)  {
 	}
 
 	defer t.Rollback()
-
 
 	query := "INSERT INTO users(about, email, fullname, nickname) VALUES ($1,$2,$3,$4) RETURNING *"
 
@@ -212,12 +189,12 @@ func UserCreate(w http.ResponseWriter, r *http.Request)  {
 		fmt.Println(err.Error())
 		errorName := err.(*pq.Error).Code.Name()
 
-		if errorName == "unique_violation"{
-			users := make([]models.User, 0)
+		if errorName == "unique_violation" {
+			usrList := models.UserList{}
 
 			rows, err := db.DbQuery("SELECT * FROM users WHERE nickname=$1 OR email=$2", []interface{}{user.NickName, user.Email})
 
-			if err != nil{
+			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -232,16 +209,13 @@ func UserCreate(w http.ResponseWriter, r *http.Request)  {
 					return
 				}
 
-				users = append(users, usr)
+				usrList = append(usrList, usr)
 			}
 			rows.Close()
 
-			resp, _ := json.Marshal(users)
-			w.Header().Set("content-type", "application/json")
-
+			resData, _ := usrList.MarshalJSON()
 			w.WriteHeader(http.StatusConflict)
-			w.Write(resp)
-
+			w.Write(resData)
 			return
 		}
 
@@ -250,19 +224,15 @@ func UserCreate(w http.ResponseWriter, r *http.Request)  {
 
 	}
 
-
-	resp, err := json.Marshal(user)
+	resData, err := user.MarshalJSON()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	t.Commit()
-
-	w.Header().Set("content-type", "application/json")
-
 	w.WriteHeader(http.StatusCreated)
-	w.Write(resp)
+	w.Write(resData)
 	return
 
 }

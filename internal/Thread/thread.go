@@ -5,23 +5,24 @@ import (
 	"ForumsApi/internal/Errors"
 	"ForumsApi/models"
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/lib/pq"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+
+	"github.com/gorilla/mux"
+	"github.com/lib/pq"
 )
 
 func ThreadPosts(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "application/json")
 	vars := mux.Vars(r)
 	slugOrId := vars["slug_or_id"]
 
 	thr, err := GetThread(slugOrId)
 
 	if err != nil {
-		Errors.SendError("Can't find thread with id " + slugOrId + "\n", 404, &w)
+		Errors.SendError("Can't find thread with id "+slugOrId+"\n", 404, &w)
 		return
 	}
 
@@ -30,9 +31,9 @@ func ThreadPosts(w http.ResponseWriter, r *http.Request) {
 	descVal := r.URL.Query().Get("desc")
 	sortVal := r.URL.Query().Get("sort")
 
-	var since= false
-	var desc= false
-	var limit= false
+	var since = false
+	var desc = false
+	var limit = false
 
 	if limitVal == "" {
 		limitVal = " ALL"
@@ -121,7 +122,7 @@ func ThreadPosts(w http.ResponseWriter, r *http.Request) {
 			limitAddition = " WHERE rank <= " + limitVal
 		}
 
-		query :="SELECT author,created,forum,id,isedited,message,parent,thread FROM (" +
+		query := "SELECT author,created,forum,id,isedited,message,parent,thread FROM (" +
 			" SELECT author,id_array,created,forum,id,isedited,message,parent,thread, " +
 			" dense_rank() over (ORDER BY id_array[1] " + descflag + " ) AS rank " +
 			" FROM posts WHERE thread=$1 " + sinceAddition + " ) AS tree " + limitAddition + " " + sortAddition
@@ -136,9 +137,10 @@ func ThreadPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer rows.Close()
-	posts := make([]models.Post, 0)
+
+	postList := models.PostList{}
 	var i = 0
-	for rows.Next(){
+	for rows.Next() {
 		i++
 		post := models.Post{}
 
@@ -149,27 +151,23 @@ func ThreadPosts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		posts = append(posts, post)
+		postList = append(postList, post)
 
 	}
 
 	defer rows.Close()
 
-	w.Header().Set("content-type", "application/json")
-
-	resp, _ := json.Marshal(posts)
-
-	w.Write(resp)
-
+	resData, _ := postList.MarshalJSON()
+	w.Write(resData)
 	return
 }
 
-
-func ThreadDetails(w http.ResponseWriter, r *http.Request){
+func ThreadDetails(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "application/json")
 	vars := mux.Vars(r)
 	slugOrId := vars["slug_or_id"]
 
-	if r.Method == http.MethodPost{
+	if r.Method == http.MethodPost {
 
 		body, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
@@ -180,21 +178,18 @@ func ThreadDetails(w http.ResponseWriter, r *http.Request){
 		}
 
 		thr := models.Thread{}
+		err = thr.UnmarshalJSON(body)
 
-		err = json.Unmarshal(body, &thr)
-
-		if thr.Title == "" && thr.Message == ""{
+		if thr.Title == "" && thr.Message == "" {
 			existThr, err := GetThread(slugOrId)
 
 			if err != nil {
-				Errors.SendError("Can't find thread with id " + slugOrId + "\n", 404, &w)
+				Errors.SendError("Can't find thread with id "+slugOrId+"\n", 404, &w)
 				return
 			}
 
-			resp, err := json.Marshal(existThr)
-			w.Header().Set("content-type", "application/json")
-
-			w.Write(resp)
+			resData, _ := existThr.MarshalJSON()
+			w.Write(resData)
 			return
 		}
 
@@ -232,56 +227,38 @@ func ThreadDetails(w http.ResponseWriter, r *http.Request){
 		query := "UPDATE threads SET " + messageAddition + many + titleAddition + " WHERE " + idenAdditional + " RETURNING *"
 		row = db.DbQueryRow(query, nil)
 
-		err = row.Scan(&thr.Id, &thr.Author, &thr.Created, &thr.Forum,  &thr.Message, &thr.Slug, &thr.Title, &thr.Votes)
+		err = row.Scan(&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &thr.Slug, &thr.Title, &thr.Votes)
 
 		if err != nil {
-			Errors.SendError("Can't find thread with id " + slugOrId + "\n", 404, &w)
+			Errors.SendError("Can't find thread with id "+slugOrId+"\n", 404, &w)
 			return
 		}
-
-		resp, err := json.Marshal(thr)
-		w.Header().Set("content-type", "application/json")
-
-		w.Write(resp)
-
+		resData, err := thr.MarshalJSON()
+		w.Write(resData)
 		return
 	}
 
 	thr, err := GetThread(slugOrId)
 
 	if err != nil {
-		Errors.SendError("Can't find thread with id " + slugOrId + "\n", 404, &w)
+		Errors.SendError("Can't find thread with id "+slugOrId+"\n", http.StatusNotFound, &w)
 		return
 	}
 
-	resp, _ := json.Marshal(thr)
-	w.Header().Set("content-type", "application/json")
-
-	w.Write(resp)
-
+	resData, _ := thr.MarshalJSON()
+	w.Write(resData)
 	return
 }
-
 
 func GetThread(slug string) (*models.Thread, error) {
 	thrId, err := strconv.Atoi(slug)
 	var row *sql.Row
 
-	//if t == nil {
 	if err != nil {
 		row = db.DbQueryRow("SELECT * FROM threads WHERE slug=$1;", []interface{}{slug})
 	} else {
 		row = db.DbQueryRow("SELECT * FROM threads WHERE id=$1;", []interface{}{thrId})
 	}
-	//} else {
-	//	if err != nil {
-	//		row = t.QueryRow("SELECT * FROM threads WHERE slug=$1;", slug)
-	//	} else {
-	//		row = t.QueryRow("SELECT * FROM threads WHERE id=$1;", thrId)
-	//	}
-	//}
-
-
 
 	var sqlSlug sql.NullString
 
@@ -301,9 +278,8 @@ func GetThread(slug string) (*models.Thread, error) {
 	return thr, nil
 }
 
-
-
-func ThreadCreate(w http.ResponseWriter, r *http.Request){
+func ThreadCreate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "application/json")
 	body, readErr := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 
@@ -335,19 +311,18 @@ func ThreadCreate(w http.ResponseWriter, r *http.Request){
 	}
 
 	thr := models.Thread{}
-
-	json.Unmarshal(body, &thr)
+	thr.UnmarshalJSON(body)
 
 	params := mux.Vars(r)
 	slug := params["slug"]
 
 	var row *sql.Row
 	if thr.Slug == "" {
-		row = t.QueryRow("INSERT INTO threads(author, created, forum, message, title) VALUES ($1, $2, " +
+		row = t.QueryRow("INSERT INTO threads(author, created, forum, message, title) VALUES ($1, $2, "+
 			"(SELECT slug FROM forums WHERE slug=$3), $4, $5) RETURNING *", thr.Author, thr.Created, slug,
 			thr.Message, thr.Title)
 	} else {
-		row = t.QueryRow("INSERT INTO threads(author, created, forum, message, title, slug) VALUES ($1, $2, " +
+		row = t.QueryRow("INSERT INTO threads(author, created, forum, message, title, slug) VALUES ($1, $2, "+
 			"(SELECT slug FROM forums WHERE slug=$3), $4, $5, $6) RETURNING *", thr.Author, thr.Created, slug,
 			thr.Message, thr.Title, thr.Slug)
 	}
@@ -360,20 +335,17 @@ func ThreadCreate(w http.ResponseWriter, r *http.Request){
 		fmt.Println(err.Error())
 		errorName := err.(*pq.Error).Code.Name()
 
-		if errorName == "foreign_key_violation" || errorName == "not_null_violation"{
-			Errors.SendError( "Can't find user or forum \n", 404, &w)
+		if errorName == "foreign_key_violation" || errorName == "not_null_violation" {
+			Errors.SendError("Can't find user or forum \n", 404, &w)
 			return
 		}
 
-		if errorName == "unique_violation"{
+		if errorName == "unique_violation" {
 			existThr, _ := GetThread(thr.Slug)
 
-			w.Header().Set("content-type", "application/json")
-
 			w.WriteHeader(http.StatusConflict)
-			resp, _ := json.Marshal(existThr)
-
-			w.Write(resp)
+			resData, _ := existThr.MarshalJSON()
+			w.Write(resData)
 			return
 		}
 		return
@@ -398,12 +370,8 @@ func ThreadCreate(w http.ResponseWriter, r *http.Request){
 	}
 	t.Commit()
 
-
-	resp, _:= json.Marshal(newThr)
-	w.Header().Set("content-type", "application/json")
-
+	resData, _ := newThr.MarshalJSON()
 	w.WriteHeader(http.StatusCreated)
-	w.Write(resp)
-
+	w.Write(resData)
 	return
 }

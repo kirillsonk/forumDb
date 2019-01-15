@@ -6,16 +6,18 @@ import (
 	"ForumsApi/internal/User"
 	"ForumsApi/models"
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/lib/pq"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/lib/pq"
 )
 
-func ForumUsers(w http.ResponseWriter, r *http.Request){
-	if r.Method != http.MethodGet{
+func ForumUsers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "application/json")
+
+	if r.Method != http.MethodGet {
 		return
 	}
 
@@ -47,10 +49,9 @@ func ForumUsers(w http.ResponseWriter, r *http.Request){
 	frm, _ := getForum(slug, nil)
 
 	if frm == nil {
-		Errors.SendError("Can't find forum with slug " + slug + "\n", 404, &w)
+		Errors.SendError("Can't find forum with slug "+slug+"\n", 404, &w)
 		return
 	}
-
 
 	if !limit && !since && !desc {
 		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 ORDER BY nickname ASC"
@@ -77,7 +78,7 @@ func ForumUsers(w http.ResponseWriter, r *http.Request){
 		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 ORDER BY nickname DESC LIMIT $2"
 		rows, err = db.DbQuery(query, []interface{}{slug, limitVal})
 
-	} else if limit && since && !desc {//here
+	} else if limit && since && !desc {
 		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 AND u.nickname>$2 ORDER BY nickname ASC LIMIT $3"
 
 		rows, err = db.DbQuery(query, []interface{}{slug, sinceVal, limitVal})
@@ -90,38 +91,35 @@ func ForumUsers(w http.ResponseWriter, r *http.Request){
 	}
 
 	if err != nil {
-		Errors.SendError( "Can't find forum with slug " + slug + "\n", 404, &w)
+		Errors.SendError("Can't find forum with slug "+slug+"\n", http.StatusInternalServerError, &w)
 		return
 	}
 
-	users := make([]models.User, 0)
+	usrList := models.UserList{}
 
 	for rows.Next() {
-		usr := models.User{}
+		user := models.User{}
 
-		err := rows.Scan(&usr.About, &usr.Email, &usr.FullName, &usr.NickName)
-
+		err := rows.Scan(&user.About, &user.Email, &user.FullName, &user.NickName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		users = append(users, usr)
+		usrList = append(usrList, user)
 	}
 
 	defer rows.Close()
 
-
-	resp, _ := json.Marshal(users)
-	w.Header().Set("content-type", "application/json")
-
-	w.Write(resp)
-
+	resData, _ := usrList.MarshalJSON() //не уверен, что правильно. См. models User
+	w.Write(resData)
 	return
 }
 
+func ForumThreads(w http.ResponseWriter, r *http.Request) {
 
-func ForumThreads(w http.ResponseWriter, r *http.Request){
+	w.Header().Set("content-type", "application/json")
+
 	if r.Method != http.MethodGet {
 		return
 	}
@@ -146,11 +144,6 @@ func ForumThreads(w http.ResponseWriter, r *http.Request){
 
 	vars := mux.Vars(r)
 	slug := vars["slug"]
-	//frm, _ := getForum(slug, nil)  // Исправить
-	//if frm == nil {
-	//	Errors.SendError()("Can't find forum with slug " + slug + "\n", 404, &w)
-	//	return
-	//}
 
 	var rows *sql.Rows
 
@@ -168,7 +161,7 @@ func ForumThreads(w http.ResponseWriter, r *http.Request){
 		rows, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created <= $2 ORDER BY created DESC;", []interface{}{slug, sinceVal})
 	} else if limit && since && desc {
 		rows, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created <= $2 ORDER BY created DESC LIMIT $3;", []interface{}{slug, sinceVal, limitVal})
-	} else if limit && since && !desc{
+	} else if limit && since && !desc {
 		rows, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created >= $2 ORDER BY created LIMIT $3;", []interface{}{slug, sinceVal, limitVal})
 	} else if !limit && !since && !desc {
 		rows, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 ORDER BY created;", []interface{}{slug})
@@ -180,8 +173,7 @@ func ForumThreads(w http.ResponseWriter, r *http.Request){
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	thrs := make([]models.Thread, 0)
+	threadList := models.ThreadList{}
 
 	var nullSlug sql.NullString
 
@@ -189,84 +181,75 @@ func ForumThreads(w http.ResponseWriter, r *http.Request){
 
 	for rows.Next() {
 		flag = true
-		thr := models.Thread{}
-		err := rows.Scan(&thr.Id, &thr.Author, &thr.Created, &thr.Forum,  &thr.Message, &nullSlug, &thr.Title, &thr.Votes)
+		thread := models.Thread{}
+		err := rows.Scan(&thread.Id,
+			&thread.Author,
+			&thread.Created,
+			&thread.Forum,
+			&thread.Message,
+			&nullSlug,
+			&thread.Title,
+			&thread.Votes)
 
 		if nullSlug.Valid {
-			thr.Slug = nullSlug.String
+			thread.Slug = nullSlug.String
 		} else {
-			thr.Slug = ""
+			thread.Slug = ""
 		}
 
 		if err != nil {
-
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		thrs = append(thrs, thr)
+
+		threadList = append(threadList, thread) //easy
 	}
 
 	if flag == false {
 		frm, _ := getForum(slug, nil)
 		if frm == nil {
-			Errors.SendError("Can't find forum with slug " + slug + "\n", 404, &w)
+			Errors.SendError("Can't find forum with slug "+slug+"\n", 404, &w)
 			return
 		}
 	}
 
 	defer rows.Close()
 
-
-	resp, _ := json.Marshal(thrs)
-	w.Header().Set("content-type", "application/json")
-
-	w.Write(resp)
-
+	resData, _ := threadList.MarshalJSON()
+	w.Write(resData)
 	return
 }
 
-
-func getForum(slugOrId string, t *sql.Tx) (*models.Forum,error) {
+func getForum(slugOrId string, t *sql.Tx) (*models.Forum, error) {
 	forum := models.Forum{}
-	var err error
-	//if t == nil {
-	err = db.DbQueryRow("SELECT * FROM forums WHERE slug=$1", []interface{}{slugOrId}).Scan(&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
-	//} else {
-	//	err = t.QueryRow("SELECT * FROM forums WHERE slug=$1", slugOrId).Scan(&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
-	//}
 
+	var err error
+	err = db.DbQueryRow("SELECT * FROM forums WHERE slug=$1", []interface{}{slugOrId}).Scan(&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
 
 	if err != nil {
 		return nil, err
 	}
-
 	return &forum, nil
 }
 
-
-func ForumDetails(w http.ResponseWriter, r *http.Request){
+func ForumDetails(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "application/json")
 	vars := mux.Vars(r)
 	slug := vars["slug"]
-	frm, err := getForum(slug, nil)
+	forum, err := getForum(slug, nil)
 
 	if err != nil {
-		Errors.SendError( "Can't find forum with slug " + slug + "\n", 404, &w)
+		Errors.SendError("Can't find forum with slug "+slug+"\n", http.StatusNotFound, &w)
 		return
 	}
 
-	resp, err := json.Marshal(frm)
-
-	if err != nil {
-		return
-	}
-	w.Header().Set("content-type", "application/json")
-
-	w.Write(resp)
+	resData, _ := forum.MarshalJSON()
+	w.Write(resData)
 	return
 }
 
-
-func ForumCreate(w http.ResponseWriter, r *http.Request){
+func ForumCreate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "application/json")
 	if r.Method == http.MethodGet {
 		return
 	}
@@ -295,12 +278,12 @@ func ForumCreate(w http.ResponseWriter, r *http.Request){
 	}
 
 	forum := new(models.Forum)
-	err = json.Unmarshal(body, forum)
+	err = forum.UnmarshalJSON(body)
 
 	existUser, _ := User.GetUser(forum.User)
 
 	if existUser == nil {
-		Errors.SendError( "Can't find user with name " + forum.User + "\n", 404, &w)
+		Errors.SendError("Can't find user with name "+forum.User+"\n", http.StatusNotFound, &w)
 		return
 	}
 
@@ -311,7 +294,7 @@ func ForumCreate(w http.ResponseWriter, r *http.Request){
 	if err != nil {
 		errorName := err.(*pq.Error).Code.Name()
 		if errorName == "foreign_key_violation" {
-			Errors.SendError( "Can't find user with name " + forum.User + "\n", 404, &w)
+			Errors.SendError("Can't find user with name "+forum.User+"\n", http.StatusNotFound, &w)
 			return
 		}
 		if errorName == "unique_violation" {
@@ -324,26 +307,17 @@ func ForumCreate(w http.ResponseWriter, r *http.Request){
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-
-			w.Header().Set("content-type", "application/json")
-
 			w.WriteHeader(http.StatusConflict)
-			resp, _ := json.Marshal(fr)
-
-			w.Write(resp)
+			resData, _ := fr.MarshalJSON()
+			w.Write(resData)
 			return
 		}
 	}
 
 	t.Commit()
 
-	resp, _ := json.Marshal(forum)
-
-	w.Header().Set("content-type", "application/json")
-
+	resData, _ := forum.MarshalJSON()
 	w.WriteHeader(http.StatusCreated)
-
-	w.Write(resp)
-
+	w.Write(resData)
 	return
 }

@@ -5,19 +5,19 @@ import (
 	"ForumsApi/internal/Errors"
 	"ForumsApi/internal/Thread"
 	"ForumsApi/models"
-	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/lib/pq"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+
+	"github.com/gorilla/mux"
+	"github.com/lib/pq"
 )
 
+func ThreadVote(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "application/json")
 
-
-func ThreadVote(w http.ResponseWriter, r *http.Request)  {
-	if r.Method != http.MethodPost{
+	if r.Method != http.MethodPost {
 		return
 	}
 
@@ -54,25 +54,24 @@ func ThreadVote(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 
-	err = json.Unmarshal(body, &vote)
-
+	err = vote.UnmarshalJSON(body)
 	thrId, err := strconv.Atoi(slugOrId)
 
 	if err != nil {
-		_,err = t.Exec("INSERT INTO votes(nickname, voice, thread) VALUES ($1,$2, (SELECT id FROM threads WHERE slug=$3)) " +
-			"ON CONFLICT (nickname, thread) DO " +
+		_, err = t.Exec("INSERT INTO votes(nickname, voice, thread) VALUES ($1,$2, (SELECT id FROM threads WHERE slug=$3)) "+
+			"ON CONFLICT (nickname, thread) DO "+
 			"UPDATE SET voice=$2",
 			vote.Nickname, vote.Voice, slugOrId)
 	} else {
-		_,err = t.Exec("INSERT INTO votes(nickname, voice, thread) VALUES ($1,$2,$3) " +
-			"ON CONFLICT (nickname, thread) DO " +
+		_, err = t.Exec("INSERT INTO votes(nickname, voice, thread) VALUES ($1,$2,$3) "+
+			"ON CONFLICT (nickname, thread) DO "+
 			"UPDATE SET voice=$2",
 			vote.Nickname, vote.Voice, thrId)
 	}
 
 	if err != nil {
 		if err.(*pq.Error).Code.Name() == "foreign_key_violation" {
-			Errors.SendError("Can't find user with id " + slugOrId + "\n", 404, &w)
+			Errors.SendError("Can't find user with id "+slugOrId+"\n", 404, &w)
 			return
 		}
 	}
@@ -82,16 +81,12 @@ func ThreadVote(w http.ResponseWriter, r *http.Request)  {
 	thr, err := Thread.GetThread(slugOrId)
 
 	if err != nil {
-		Errors.SendError("Can't find thread with id " + slugOrId + "\n", 404, &w)
+		Errors.SendError("Can't find thread with id "+slugOrId+"\n", 404, &w)
 		return
 	}
 
-
-
-	resp, _ := json.Marshal(thr)
-	w.Header().Set("content-type", "application/json")
-
-	w.Write(resp)
+	resData, _ := thr.MarshalJSON()
+	w.Write(resData)
 	return
 
 }

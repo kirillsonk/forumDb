@@ -6,26 +6,21 @@ import (
 	"ForumsApi/internal/Thread"
 	"ForumsApi/models"
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/lib/pq"
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/gorilla/mux"
+	"github.com/lib/pq"
 )
 
-func PostCreate(w http.ResponseWriter, r *http.Request)  {
-	if r.Method != http.MethodPost{
+func PostCreate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "application/json")
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	//globalCount++
-	//fmt.Println(globalCount)
-
-	//if globalCount == 15500 {
-	//	db.Exec("VACUUM ANALYZE;")
-	//}
 
 	vars := mux.Vars(r)
 	slugOrId := vars["slug_or_id"]
@@ -38,10 +33,8 @@ func PostCreate(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 
-	posts := make([]models.Post, 0)
-
-	err = json.Unmarshal(body, &posts)
-
+	postList := models.PostList{}
+	err = postList.UnmarshalJSON(body)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -66,80 +59,41 @@ func PostCreate(w http.ResponseWriter, r *http.Request)  {
 
 	thr, err := Thread.GetThread(slugOrId)
 
-	if err != nil{
-		Errors.SendError("Can't find thread with id " + slugOrId + "\n", 404, &w)
+	if err != nil {
+		Errors.SendError("Can't find thread with id "+slugOrId+"\n", 404, &w)
 		return
 	}
 
 	defer t.Rollback()
-	if len(posts) == 0 {
-		data := make([]models.Post,0)
+	if len(postList) == 0 {
+		data := models.PostList{}
 
-		resp, err := json.Marshal(data)
+		resData, err := data.MarshalJSON()
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		w.Header().Set("content-type", "application/json")
-
 		w.WriteHeader(http.StatusCreated)
-		w.Write(resp)
+		w.Write(resData)
 		return
 	}
 
-
-
-	//var firstCreated time.Time
-	//var err error
-	//stmt, err := t.Prepare("INSERT INTO posts(author, forum, message, parent, thread, created) VALUES ($1,$2,$3,$4,$5,$6) RETURNING author,created,forum,id,isedited,message,parent,thread")
-
-
-	resQuery :=  "INSERT INTO posts(author, forum, message, parent, thread) VALUES "
+	resQuery := "INSERT INTO posts(author, forum, message, parent, thread) VALUES "
 
 	forumUsersInsert := "INSERT INTO forum_users(forum,author) VALUES "
 
 	var subQuery []string
 	var forumUsersSubQuery []string
 
-	for _, p := range posts{
-
+	for _, p := range postList {
 
 		values := fmt.Sprintf("('%s', '%s', '%s', %d, %d) ", p.Author, thr.Forum, p.Message, p.Parent, thr.Id)
 
-		//query += subQuery
-
 		subQuery = append(subQuery, values)
-
-		//newPost := models.Post{}
-		//if count == 0 { // Для того, чтобы все последующие добавления постов происхдили с той же датой и временем.
-		//	row := t.QueryRow("INSERT INTO posts(author, forum, message, parent, thread) VALUES ($1,$2,$3,$4,$5) RETURNING author,created,forum,id,isedited,message,parent,thread",
-		//		p.Author, thr.Forum,p.Message, p.Parent, thr.Id)
-		//	err = row.Scan(&newPost.Author, &newPost.Created, &newPost.Forum, &newPost.Id, &newPost.IsEdited, &newPost.Message,
-		//		&newPost.Parent, &newPost.Thread)
-		//
-		//	firstCreated = newPost.Created
-		//} else {
-		//	row := stmt.QueryRow(p.Author, thr.Forum,p.Message, p.Parent, thr.Id, firstCreated)
-		//	err = row.Scan(&newPost.Author,  &newPost.Created, &newPost.Forum, &newPost.Id, &newPost.IsEdited, &newPost.Message,
-		//		&newPost.Parent, &newPost.Thread)
-		//}
-
-		//_,err := t.Exec("INSERT INTO forum_users(forum,author) VALUES ($1,$2) ON CONFLICT DO NOTHING", thr.Forum, p.Author)
-
-
 		forumUsersValues := fmt.Sprintf("('%s', '%s') ", thr.Forum, p.Author)
-
 		forumUsersSubQuery = append(forumUsersSubQuery, forumUsersValues)
-
-		//if err != nil {
-		//	fmt.Println("postCreate insert forum_users ", err.Error())
-		//}
-
-		//data = append(data, newPost)
-
-
 	}
 
 	resQuery += strings.Join(subQuery, ",") + " RETURNING author,created,forum,id,isedited,message,parent,thread;"
@@ -147,13 +101,9 @@ func PostCreate(w http.ResponseWriter, r *http.Request)  {
 	forumUsersInsert += strings.Join(forumUsersSubQuery, ",") + " ON CONFLICT DO NOTHING;"
 
 	resQuery += forumUsersInsert
-
-	//fmt.Println(resQuery)
-
 	rows, err := t.Query(resQuery)
 
 	if err != nil {
-		//fmt.Println(err.Error())
 		errorName := err.(*pq.Error).Code.Name()
 
 		fmt.Println(errorName)
@@ -176,22 +126,20 @@ func PostCreate(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 
-	//_, err = db.Exec(forumUsersInsert)
-	//
-	//if err != nil {
-	//	fmt.Println("forumUsersInsert ---- ", err.Error())
-	//	return
-	//}
-
-
-
-	data := make([]models.Post,0)
+	// data := make([]models.Post, 0)
+	data := models.PostList{}
 
 	for rows.Next() {
 		newPost := models.Post{}
 
-		err := rows.Scan(&newPost.Author,  &newPost.Created, &newPost.Forum, &newPost.Id, &newPost.IsEdited, &newPost.Message,
-			&newPost.Parent, &newPost.Thread)
+		err := rows.Scan(&newPost.Author,
+			&newPost.Created,
+			&newPost.Forum,
+			&newPost.Id,
+			&newPost.IsEdited,
+			&newPost.Message,
+			&newPost.Parent,
+			&newPost.Thread)
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -201,25 +149,20 @@ func PostCreate(w http.ResponseWriter, r *http.Request)  {
 		data = append(data, newPost)
 	}
 
-	resp, err := json.Marshal(data)
-
+	resData, err := data.MarshalJSON()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
 	t.Commit()
-
-	w.Header().Set("content-type", "application/json")
-
 	w.WriteHeader(http.StatusCreated)
-	w.Write(resp)
+	w.Write(resData)
 
 	return
 }
 
-
-func PostDetails(w http.ResponseWriter, r *http.Request){
+func PostDetails(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "application/json")
 
 	vars := mux.Vars(r)
 	id := vars["id"]
@@ -236,73 +179,50 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 		}
 
 		post := new(models.Post)
-
-		err = json.Unmarshal(body, post)
+		err = post.UnmarshalJSON(body)
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		if err != nil{
-			Errors.SendError( "Can't find post with id " + id + "\n", 404, &w)
+		if err != nil {
+			Errors.SendError("Can't find post with id "+id+"\n", 404, &w)
 			return
 		}
 
 		if post.Message == "" {
 			row := db.DbQueryRow("SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE id=$1", []interface{}{id})
 
-			err = row.Scan(&post.Author,&post.Created,&post.Forum,&post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
+			err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
 
-			if err != nil{
+			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
-			resp, _ := json.Marshal(post)
-			w.Header().Set("content-type", "application/json")
-
-			w.Write(resp)
-
+			resData, _ := post.MarshalJSON()
+			w.Write(resData)
 			return
 		}
 		row := db.DbQueryRow("UPDATE posts SET message=$1, isedited=true WHERE id=$2 RETURNING author,created,forum,id,isedited,message,parent,thread", []interface{}{post.Message, id})
-		err = row.Scan(&post.Author,&post.Created,&post.Forum,&post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
+		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
 
 		if err != nil {
 			Errors.SendError("Can't find post with id "+id+"\n", 404, &w)
 			return
 		}
 
-		resp, _ := json.Marshal(post)
-		w.Header().Set("content-type", "application/json")
-
-		w.Write(resp)
+		resData, _ := post.MarshalJSON()
+		w.Write(resData)
 
 		return
 	}
 	postDetail := models.PostDetail{}
 
-	//query := "SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE id=$1; "
-
-
-	//post := new(models.Post)
-	//row := db.QueryRow("SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE id=$1;", id)
-	//
-	//err := row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
-	//
-	//if err != nil {
-	//	Errors.SendError("Can't find post with id "+id+"\n", 404, &w)
-	//	return
-	//}
-	//
-	//postDetail.Post = post
-
-	//var query string
-
 	var oblectsArr []string
 	objects := strings.Split(related, ",")
-	for index := range objects  {
+	for index := range objects {
 		item := objects[index]
 		oblectsArr = append(oblectsArr, item)
 	}
@@ -314,32 +234,12 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 	for index := range oblectsArr {
 		if oblectsArr[index] == "user" {
 			relUser = true
-			//query += "SELECT about,email,fullname,nickname FROM users WHERE nickname='" + post.Author + "'; "
-			//author, _ := getUser(post.Author, nil)
-			//postDetail.Author = author
 		}
 		if oblectsArr[index] == "thread" {
 			relThread = true
-			//_, err := strconv.Atoi(strconv.Itoa(int(post.Thread)))
-			//
-			//if err != nil {
-			//	query += "SELECT * FROM threads WHERE slug='" + strconv.Itoa(int(post.Thread)) + "'; "
-			//} else {
-			//	query += "SELECT * FROM threads WHERE id=" + strconv.Itoa(int(post.Thread)) + "; "
-			//}
-
-			//if err != nil {
-			//	w.WriteHeader(http.StatusInternalServerError)
-			//	return
-			//}
-
-			//postDetail.Thread = thread
 		}
 		if oblectsArr[index] == "forum" {
 			relForum = true
-			//query += "SELECT * FROM forums WHERE slug='" + post.Forum + "'; "
-			//forum, _ := getForum(post.Forum, nil)
-			//postDetail.Forum = forum
 		}
 	}
 
@@ -379,14 +279,13 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 		post := new(models.Post)
 
 		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
-			&thr.Id, &thr.Author, &thr.Created, &thr.Forum,  &thr.Message, &sqlSlug, &thr.Title, &thr.Votes)
+			&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &sqlSlug, &thr.Title, &thr.Votes)
 
 		if !sqlSlug.Valid {
 			thr.Slug = ""
 		} else {
 			thr.Slug = sqlSlug.String
 		}
-
 
 		postDetail.Thread = thr
 		postDetail.Post = post
@@ -402,7 +301,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 		post := new(models.Post)
 
 		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
-			&thr.Id, &thr.Author, &thr.Created, &thr.Forum,  &thr.Message, &sqlSlug, &thr.Title, &thr.Votes,
+			&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &sqlSlug, &thr.Title, &thr.Votes,
 			&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
 
 		if !sqlSlug.Valid {
@@ -410,7 +309,6 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 		} else {
 			thr.Slug = sqlSlug.String
 		}
-
 
 		postDetail.Thread = thr
 		postDetail.Post = post
@@ -463,14 +361,13 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 
 		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
 			&user.About, &user.Email, &user.FullName, &user.NickName,
-			&thr.Id, &thr.Author, &thr.Created, &thr.Forum,  &thr.Message, &sqlSlug, &thr.Title, &thr.Votes)
+			&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &sqlSlug, &thr.Title, &thr.Votes)
 
 		if !sqlSlug.Valid {
 			thr.Slug = ""
 		} else {
 			thr.Slug = sqlSlug.String
 		}
-
 
 		postDetail.Author = user
 		postDetail.Post = post
@@ -491,7 +388,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 
 		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
 			&user.About, &user.Email, &user.FullName, &user.NickName,
-			&thr.Id, &thr.Author, &thr.Created, &thr.Forum,  &thr.Message, &sqlSlug, &thr.Title, &thr.Votes,
+			&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &sqlSlug, &thr.Title, &thr.Votes,
 			&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
 
 		if !sqlSlug.Valid {
@@ -500,7 +397,6 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 			thr.Slug = sqlSlug.String
 		}
 
-
 		postDetail.Author = user
 		postDetail.Post = post
 		postDetail.Thread = thr
@@ -508,93 +404,13 @@ func PostDetails(w http.ResponseWriter, r *http.Request){
 
 	}
 
-
 	if err != nil {
 		fmt.Println(err.Error())
 		Errors.SendError("Can't find post with id "+id+"\n", 404, &w)
 		return
 	}
 
-	//rows, err := db.Query(query)
-
-	//fmt.Println(query)
-
-	//if err != nil {
-	//	Errors.SendError("Can't find post with id "+id+"\n", 404, &w)
-	//	return
-	//}
-
-
-	//fmt.Println("before")
-	//for rows.Next(){
-	//	fmt.Println("after")
-	//
-	//	if relUser {
-	//		fmt.Println("get user")
-	//
-	//		user := new(models.User)
-	//		err := rows.Scan(&user.About, &user.Email, &user.FullName, &user.NickName)
-	//		if err != nil {
-	//			fmt.Println(err.Error())
-	//			Errors.SendError("user", 500, &w)
-	//			return
-	//		}
-	//
-	//		postDetail.Author = user
-	//
-	//		relUser = false
-	//	} else if relThread {
-	//		fmt.Println("get thread")
-	//
-	//		thr := new(models.Thread)
-	//		err = rows.Scan(&thr.Id, &thr.Author, &thr.Created, &thr.Forum,  &thr.Message, &thr.Slug, &thr.Title, &thr.Votes)
-	//
-	//		if err != nil {
-	//			Errors.SendError("thread", 500, &w)
-	//			return
-	//		}
-	//
-	//		postDetail.Thread = thr
-	//
-	//		relThread = false
-	//	} else if relForum {
-	//		fmt.Println("get forum")
-	//
-	//		forum := new(models.Forum)
-	//		err = rows.Scan(&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
-	//
-	//		if err != nil {
-	//			Errors.SendError("forum", 500, &w)
-	//			return
-	//		}
-	//
-	//		postDetail.Forum = forum
-	//
-	//		relForum = false
-	//	}
-	//
-	//}
-
-
-
-
-	//row := db.QueryRow("SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE id=$1", id)
-
-	//post := models.Post{}
-
-	//err := row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
-
-	//if err != nil {
-	//	Errors.SendError( "Can't find post with id " + id + "\n", 404, &w)
-	//	return
-	//}
-
-
-
-	resp, _ := json.Marshal(postDetail)
-	w.Header().Set("content-type", "application/json")
-
-	w.Write(resp)
+	resData, _ := postDetail.MarshalJSON()
+	w.Write(resData)
 	return
 }
-
