@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 )
 
-
 const (
 	user     = "Sonk"
 	password = "k123"

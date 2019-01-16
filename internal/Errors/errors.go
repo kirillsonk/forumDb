@@ -1,7 +1,7 @@
 package Errors
 
 import (
-	"ForumsApi/models"
+	"forum-database/models"
 	"net/http"
 )
 

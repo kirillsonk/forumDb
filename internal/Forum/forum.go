@@ -1,10 +1,10 @@
 package Forum
 
 import (
-	"ForumsApi/db"
-	"ForumsApi/internal/Errors"
-	"ForumsApi/internal/User"
-	"ForumsApi/models"
+	"forum-database/db"
+	"forum-database/internal/Errors"
+	"forum-database/internal/User"
+	"forum-database/models"
 	"database/sql"
 	"fmt"
 	"io/ioutil"

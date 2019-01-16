@@ -1,10 +1,10 @@
 package Vote
 
 import (
-	"ForumsApi/db"
-	"ForumsApi/internal/Errors"
-	"ForumsApi/internal/Thread"
-	"ForumsApi/models"
+	"forum-database/db"
+	"forum-database/internal/Errors"
+	"forum-database/internal/Thread"
+	"forum-database/models"
 	"fmt"
 	"io/ioutil"
 	"net/http"

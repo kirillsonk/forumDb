@@ -1,8 +1,7 @@
-module ForumsApi
+module forum-database
 
 require (
 	github.com/Bowery/prompt v0.0.0-20180817134258-8a1d5376df1c // indirect
-	github.com/Grisha23/ForumsApi v0.0.0-20181123170953-50b57088b8e6
 	github.com/aryann/difflib v0.0.0-20170710044230-e206f873d14a // indirect
 	github.com/bozaro/golorem v0.0.0-20170501165920-50e5b610280b // indirect
 	github.com/bozaro/tech-db-forum v0.2.2 // indirect

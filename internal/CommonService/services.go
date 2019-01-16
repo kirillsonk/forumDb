@@ -1,8 +1,8 @@
 package CommonService
 
 import (
-	"ForumsApi/db"
-	"ForumsApi/models"
+	"forum-database/db"
+	"forum-database/models"
 	"net/http"
 )
 

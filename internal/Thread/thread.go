@@ -1,9 +1,9 @@
 package Thread
 
 import (
-	"ForumsApi/db"
-	"ForumsApi/internal/Errors"
-	"ForumsApi/models"
+	"forum-database/db"
+	"forum-database/internal/Errors"
+	"forum-database/models"
 	"database/sql"
 	"fmt"
 	"io/ioutil"

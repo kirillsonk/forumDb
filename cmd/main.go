@@ -1,21 +1,21 @@
 package main
 
 import (
-	"ForumsApi/db"
-	"ForumsApi/internal/CommonService"
-	"ForumsApi/internal/Forum"
-	"ForumsApi/internal/Post"
-	"ForumsApi/internal/Thread"
-	"ForumsApi/internal/User"
-	"ForumsApi/internal/Vote"
 	"fmt"
-	"github.com/gorilla/mux"
+	"forum-database/db"
+	"forum-database/internal/CommonService"
+	"forum-database/internal/Forum"
+	"forum-database/internal/Post"
+	"forum-database/internal/Thread"
+	"forum-database/internal/User"
+	"forum-database/internal/Vote"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
-
-func AccessLogMiddleware (mux *mux.Router,) http.HandlerFunc   {
+func AccessLogMiddleware(mux *mux.Router) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		begin := time.Now()
 
@@ -23,7 +23,7 @@ func AccessLogMiddleware (mux *mux.Router,) http.HandlerFunc   {
 
 		sortVal := r.URL.Query().Get("sort")
 		if sortVal != "" {
-			fmt.Println("method ", r.Method, "; url", r.URL.Path,  " Sort: ", sortVal,
+			fmt.Println("method ", r.Method, "; url", r.URL.Path, " Sort: ", sortVal,
 				"Time work: ", time.Since(begin))
 		} else {
 			fmt.Println("method ", r.Method, "; url", r.URL.Path,
@@ -33,7 +33,7 @@ func AccessLogMiddleware (mux *mux.Router,) http.HandlerFunc   {
 	})
 }
 
-func main(){
+func main() {
 	postgres, _ := db.InitDb()
 
 	router := mux.NewRouter()
@@ -57,7 +57,7 @@ func main(){
 	router.HandleFunc(`/api/user/{nickname}/create`, User.UserCreate)
 	router.HandleFunc(`/api/user/{nickname}/profile`, User.UserProfile)
 
-//	siteHandler := AccessLogMiddleware(router)
+	//	siteHandler := AccessLogMiddleware(router)
 
 	http.Handle("/", router)
 	http.ListenAndServe(":5000", nil)
@@ -66,4 +66,3 @@ func main(){
 
 	return
 }
-

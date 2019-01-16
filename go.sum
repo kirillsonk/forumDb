@@ -1,7 +1,5 @@
 github.com/Bowery/prompt v0.0.0-20180817134258-8a1d5376df1c h1:fAMg70P5ydy1uiIj6CdA69h6nmQKbv18VlVOXhKNrcM=
 github.com/Bowery/prompt v0.0.0-20180817134258-8a1d5376df1c/go.mod h1:4/6eNcqZ09BZ9wLK3tZOjBA1nDj+B0728nlX5YRlSmQ=
-github.com/Grisha23/ForumsApi v0.0.0-20181123170953-50b57088b8e6 h1:7Y+qFVCUC5CdAMDGRh/UK74f5/hGNlxVk51N6ce0WMA=
-github.com/Grisha23/ForumsApi v0.0.0-20181123170953-50b57088b8e6/go.mod h1:uOBEkqaIb1/6Cg5ILcL/TyN3aPAIhA9KwJq6lmO3afg=
 github.com/PuerkitoBio/purell v1.1.0 h1:rmGxhojJlM0tuKtfdvliR84CFHljx9ag64t2xmVkjK4=
 github.com/PuerkitoBio/purell v1.1.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 h1:d+Bc7a5rLufV/sSk/8dngufqelfh6jnri85riMAaF/M=
