@@ -17,7 +17,7 @@ const (
 
 var db *sql.DB
 
-func InitDb() (*sql.DB, error) {
+func InitDatabase() (*sql.DB, error) {
 	var err error
 	dbInfo := fmt.Sprintf("user=%s "+
 		"password=%s dbname=%s sslmode=disable",
