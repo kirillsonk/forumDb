@@ -3,16 +3,16 @@ CREATE EXTENSION IF NOT EXISTS citext;
 SET LOCAL synchronous_commit TO OFF;
 
 --Users
-CREATE TABLE IF NOT EXISTS Users (
+CREATE TABLE IF NOT EXISTS Users(
 	about CITEXT,
 	email CITEXT NOT NULL UNIQUE,
 	fullname CITEXT NOT NULL,
 	nickname CITEXT COLLATE "ucs_basic" NOT NULL UNIQUE
 );
-CREATE INDEX IF NOT EXISTS user_nickname ON Users(nickname);
+CREATE INDEX IF NOT EXISTS usrNickname ON Users(nickname);
 
 --Forums
-CREATE TABLE IF NOT EXISTS Forum (
+CREATE TABLE IF NOT EXISTS Forum(
 	posts BIGINT DEFAULT 0,
 	slug CITEXT NOT NULL UNIQUE,
 	threads INTEGER DEFAULT 0,
@@ -20,10 +20,10 @@ CREATE TABLE IF NOT EXISTS Forum (
 	author CITEXT COLLATE "ucs_basic" NOT NULL REFERENCES Users(nickname)
 );
 
-CREATE INDEX IF NOT EXISTS forum_slug ON Forum (slug);
+CREATE INDEX IF NOT EXISTS forumSlug ON Forum(slug);
 
 --Threads
-CREATE TABLE IF NOT EXISTS Thread (
+CREATE TABLE IF NOT EXISTS Thread(
 	id SERIAL PRIMARY KEY,
 	author CITEXT COLLATE "ucs_basic" NOT NULL REFERENCES Users(nickname),
 	created TIMESTAMP WITH TIME ZONE DEFAULT current_timestamp,
@@ -54,7 +54,7 @@ CREATE INDEX IF NOT EXISTS thrForm_athr ON Thread (forum,author);
 CREATE INDEX IF NOT EXISTS thrForum_cr ON Thread (forum,created);
 
 --Posts
-CREATE TABLE IF NOT EXISTS Post (
+CREATE TABLE IF NOT EXISTS Post(
 	author CITEXT COLLATE "ucs_basic" NOT NULL REFERENCES Users (nickname),
 	created TIMESTAMP WITH TIME ZONE DEFAULT current_timestamp,
 	forum CITEXT REFERENCES Forum(slug),
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS Post (
 );
 
 
-CREATE OR REPLACE FUNCTION check_message() RETURNS TRIGGER AS '
+CREATE OR REPLACE FUNCTION msg_check() RETURNS TRIGGER AS '
   BEGIN
     NEW.isedited:=false;
     RETURN NEW;
@@ -90,7 +90,7 @@ LANGUAGE plpgsql;
 
 CREATE TRIGGER change_message
 BEFORE UPDATE ON Post FOR EACH ROW WHEN (new.message=old.message)
-EXECUTE PROCEDURE check_message();
+EXECUTE PROCEDURE msg_check();
 
 CREATE TRIGGER create_post
 BEFORE INSERT ON Post FOR EACH ROW
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS ForumUser (
   UNIQUE (forum,author)
 );
 
-CREATE INDEX IF NOT EXISTS frm_usrs ON ForumUser (forum, author);
+CREATE INDEX IF NOT EXISTS frmUsrs ON ForumUser (forum, author);
 
 
 
