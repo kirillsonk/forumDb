@@ -12,40 +12,38 @@ import (
 	"github.com/lib/pq"
 )
 
-func GetUser(nickname string) (*models.User, error) {
-	if nickname == "" {
+func GetUserByNick(nick string) (*models.User, error) {
+	if nick == "" {
 		return nil, nil
 	}
 
-	var row *sql.Row
+	var qrRow *sql.Row
 
-	row = db.DbQueryRow("SELECT about,email,fullname,nickname FROM users WHERE nickname=$1", []interface{}{nickname})
-
-	user := models.User{}
-
-	err := row.Scan(&user.About, &user.Email, &user.FullName, &user.NickName)
+	qrRow = db.DbQueryRow("SELECT about,email,fullname,nickname FROM users WHERE nickname=$1", []interface{}{nick})
+	Usr := models.User{}
+	err := qrRow.Scan(&Usr.About, &Usr.Email, &Usr.Fullname, &Usr.Nickname)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &user, nil
+	return &Usr, nil
 }
 
 func UserProfile(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("content-type", "application/json")
 	vars := mux.Vars(r)
-	nickname := vars["nickname"]
+	usrNick := vars["nickname"]
+	w.Header().Set("content-type", "application/json")
 
 	if r.Method == http.MethodGet {
-		user, err := GetUser(nickname)
+		Usr, err := GetUserByNick(usrNick)
 
 		if err != nil {
-			Errors.SendError("Can't find user with nickname "+nickname+"\n", 404, &w)
+			Errors.SendError("Can't find user with nickname "+usrNick, http.StatusNotFound, &w)
 			return
 		}
 
-		resData, _ := user.MarshalJSON()
+		resData, _ := Usr.MarshalJSON()
 		w.Write(resData)
 		return
 	}
@@ -73,7 +71,7 @@ func UserProfile(w http.ResponseWriter, r *http.Request) {
 	if userUpdate.About != "" {
 		about = true
 	}
-	if userUpdate.FullName != "" {
+	if userUpdate.Fullname != "" {
 		fullname = true
 	}
 	if userUpdate.Email != "" {
@@ -81,58 +79,57 @@ func UserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !email && !fullname && !about {
-		user, err := GetUser(nickname)
+		Usr, err := GetUserByNick(usrNick)
 
 		if err != nil {
-			Errors.SendError("Can't find prifile with id "+nickname+"\n", 404, &w)
+			Errors.SendError("Can't find prifile with id "+usrNick, http.StatusNotFound, &w)
 		}
 
-		resData, _ := user.MarshalJSON()
+		resData, _ := Usr.MarshalJSON()
 		w.Write(resData)
 		return
 	}
 
-	var query string
-	var row *sql.Row
+	var qr string
+	var qrRow *sql.Row
 
 	if about && fullname && email {
-		query = "UPDATE users SET about=$1, fullname=$2, email=$3 WHERE nickname=$4 RETURNING about,email,fullname,nickname"
-		row = db.DbQueryRow(query, []interface{}{userUpdate.About, userUpdate.FullName, userUpdate.Email, nickname})
+		qr = "UPDATE users SET about=$1, fullname=$2, email=$3 WHERE nickname=$4 RETURNING about,email,fullname,nickname"
+		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.About, userUpdate.Fullname, userUpdate.Email, usrNick})
 	} else if about && fullname && !email {
-		query = "UPDATE users SET about=$1, fullname=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
-		row = db.DbQueryRow(query, []interface{}{userUpdate.About, userUpdate.FullName, nickname})
-	} else if about && !fullname && email {
-		query = "UPDATE users SET about=$1, email=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
-		row = db.DbQueryRow(query, []interface{}{userUpdate.About, userUpdate.Email, nickname})
+		qr = "UPDATE users SET about=$1, fullname=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
+		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.About, userUpdate.Fullname, usrNick})
 	} else if about && !fullname && !email {
-		query = "UPDATE users SET about=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
-		row = db.DbQueryRow(query, []interface{}{userUpdate.About, nickname})
+		qr = "UPDATE users SET about=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
+		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.About, usrNick})
+	} else if about && !fullname && email {
+		qr = "UPDATE users SET about=$1, email=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
+		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.About, userUpdate.Email, usrNick})
 	} else if !about && fullname && email {
-		query = "UPDATE users SET fullname=$1, email=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
-		row = db.DbQueryRow(query, []interface{}{userUpdate.FullName, userUpdate.Email, nickname})
-	} else if !about && fullname && !email {
-		query = "UPDATE users SET fullname=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
-		row = db.DbQueryRow(query, []interface{}{userUpdate.FullName, nickname})
+		qr = "UPDATE users SET fullname=$1, email=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
+		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.Fullname, userUpdate.Email, usrNick})
 	} else if !about && !fullname && email {
-		query = "UPDATE users SET email=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
-		row = db.DbQueryRow(query, []interface{}{userUpdate.Email, nickname})
+		qr = "UPDATE users SET email=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
+		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.Email, usrNick})
+	} else if !about && fullname && !email {
+		qr = "UPDATE users SET fullname=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
+		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.Fullname, usrNick})
 	}
 
-	err = row.Scan(&userUpdate.About, &userUpdate.Email, &userUpdate.FullName, &userUpdate.NickName)
+	err = qrRow.Scan(&userUpdate.About, &userUpdate.Email, &userUpdate.Fullname, &userUpdate.Nickname)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			Errors.SendError("Can't find prifile with id "+nickname+"\n", 404, &w)
+			Errors.SendError("Can't find prifile with id "+usrNick, http.StatusNotFound, &w)
 			return
 		}
 
 		errorName := err.(*pq.Error).Code.Name()
 
 		if errorName == "unique_violation" {
-			Errors.SendError("Can't change prifile with id "+nickname+"\n", 409, &w)
+			Errors.SendError("Can't change prifile with id "+usrNick, http.StatusConflict, &w)
 			return
 		}
-
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -142,34 +139,32 @@ func UserProfile(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func UserCreate(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("content-type", "application/json")
+func CreateUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	nickname := vars["nickname"]
+	usrNick := vars["nickname"]
 	body, _ := ioutil.ReadAll(r.Body)
+	w.Header().Set("content-type", "application/json")
 	defer r.Body.Close()
 
-	user := models.User{}
-	err := user.UnmarshalJSON(body)
+	Usr := models.User{}
+	err := Usr.UnmarshalJSON(body)
 
-	user.NickName = nickname
+	Usr.Nickname = usrNick
 
-	if user.NickName == "" || user.About == "" || user.Email == "" || user.FullName == "" {
+	if Usr.Nickname == "" || Usr.Email == "" || Usr.About == "" || Usr.Fullname == "" {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	dbConn := db.GetLink()
-
-	t, err := dbConn.Begin()
-
+	dbc, err := dbConn.Begin()
 	if err != nil {
 		// fmt.Println("set local begin ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	_, err = t.Exec("SET LOCAL synchronous_commit TO OFF")
+	_, err = dbc.Exec("SET LOCAL synchronous_commit TO OFF")
 
 	if err != nil {
 		// fmt.Println("db.begin ", err.Error())
@@ -177,12 +172,12 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer t.Rollback()
+	defer dbc.Rollback()
 
-	query := "INSERT INTO users(about, email, fullname, nickname) VALUES ($1,$2,$3,$4) RETURNING *"
+	qr := "INSERT INTO users(about, email, fullname, nickname) VALUES ($1,$2,$3,$4) RETURNING *"
 
-	err = t.QueryRow(query, user.About, user.Email, user.FullName, user.NickName).Scan(&user.About,
-		&user.Email, &user.FullName, &user.NickName)
+	err = dbc.QueryRow(qr, Usr.About, Usr.Email, Usr.Fullname, Usr.Nickname).Scan(&Usr.About,
+		&Usr.Email, &Usr.Fullname, &Usr.Nickname)
 
 	if err != nil {
 		// fmt.Println(err.Error())
@@ -191,7 +186,7 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 		if errorName == "unique_violation" {
 			usrList := models.UserList{}
 
-			rows, err := db.DbQuery("SELECT * FROM users WHERE nickname=$1 OR email=$2", []interface{}{user.NickName, user.Email})
+			rows, err := db.DbQuery("SELECT * FROM users WHERE nickname=$1 OR email=$2", []interface{}{Usr.Nickname, Usr.Email})
 
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -200,14 +195,12 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 
 			for rows.Next() {
 				usr := models.User{}
-
-				err := rows.Scan(&usr.About, &usr.Email, &usr.FullName, &usr.NickName)
+				err := rows.Scan(&usr.About, &usr.Email, &usr.Fullname, &usr.Nickname)
 
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-
 				usrList = append(usrList, usr)
 			}
 			rows.Close()
@@ -217,21 +210,18 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 			w.Write(resData)
 			return
 		}
-
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 
 	}
-
-	resData, err := user.MarshalJSON()
+	resData, err := Usr.MarshalJSON()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	t.Commit()
+	dbc.Commit()
 	w.WriteHeader(http.StatusCreated)
 	w.Write(resData)
 	return
-
 }

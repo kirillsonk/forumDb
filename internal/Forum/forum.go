@@ -94,7 +94,7 @@ func UsersForum(w http.ResponseWriter, r *http.Request) { //+
 
 		for rowsData.Next() {
 			user := models.User{}
-			err := rowsData.Scan(&user.About, &user.Email, &user.FullName, &user.NickName)
+			err := rowsData.Scan(&user.About, &user.Email, &user.Fullname, &user.Nickname)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -271,14 +271,14 @@ func CreateForum(w http.ResponseWriter, r *http.Request) {
 		Forum := new(models.Forum)
 		err = Forum.UnmarshalJSON(body)
 
-		existUser, _ := User.GetUser(Forum.User)
+		existUser, _ := User.GetUserByNick(Forum.User)
 
 		if existUser == nil {
 			Errors.SendError("Can't find user with name "+Forum.User, http.StatusNotFound, &w)
 			return
 		}
 
-		row := t.QueryRow("INSERT INTO forums(slug, title, author) VALUES ($1, $2, $3) RETURNING *", []interface{}{Forum.Slug, Forum.Title, existUser.NickName}...)
+		row := t.QueryRow("INSERT INTO forums(slug, title, author) VALUES ($1, $2, $3) RETURNING *", []interface{}{Forum.Slug, Forum.Title, existUser.Nickname}...)
 
 		err = row.Scan(&Forum.Posts, &Forum.Slug, &Forum.Threads, &Forum.Title, &Forum.User)
 

@@ -54,7 +54,7 @@ func main() {
 	router.HandleFunc(`/api/thread/{slug_or_id}/posts`, Thread.PostsThread)
 	router.HandleFunc(`/api/thread/{slug_or_id}/vote`, Vote.VoteThread)
 
-	router.HandleFunc(`/api/user/{nickname}/create`, User.UserCreate)
+	router.HandleFunc(`/api/user/{nickname}/create`, User.CreateUser)
 	router.HandleFunc(`/api/user/{nickname}/profile`, User.UserProfile)
 
 	//	siteHandler := AccessLogMiddleware(router)

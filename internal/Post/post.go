@@ -319,7 +319,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 		Post := new(models.Post)
 
 		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread,
-			&User.About, &User.Email, &User.FullName, &User.NickName)
+			&User.About, &User.Email, &User.Fullname, &User.Nickname)
 
 		postDetail.Author = User
 		postDetail.Post = Post
@@ -336,7 +336,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 		Forum := new(models.Forum)
 
 		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread,
-			&User.About, &User.Email, &User.FullName, &User.NickName,
+			&User.About, &User.Email, &User.Fullname, &User.Nickname,
 			&Forum.Posts, &Forum.Slug, &Forum.Threads, &Forum.Title, &Forum.User)
 
 		postDetail.Author = User
@@ -355,7 +355,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 		Thread := new(models.Thread)
 
 		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread,
-			&User.About, &User.Email, &User.FullName, &User.NickName,
+			&User.About, &User.Email, &User.Fullname, &User.Nickname,
 			&Thread.Id, &Thread.Author, &Thread.Created, &Thread.Forum, &Thread.Message, &sqlSlug, &Thread.Title, &Thread.Votes)
 
 		if !sqlSlug.Valid {
@@ -382,7 +382,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 		Forum := new(models.Forum)
 
 		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread,
-			&User.About, &User.Email, &User.FullName, &User.NickName,
+			&User.About, &User.Email, &User.Fullname, &User.Nickname,
 			&Thread.Id, &Thread.Author, &Thread.Created, &Thread.Forum, &Thread.Message, &sqlSlug, &Thread.Title, &Thread.Votes,
 			&Forum.Posts, &Forum.Slug, &Forum.Threads, &Forum.Title, &Forum.User)
 
