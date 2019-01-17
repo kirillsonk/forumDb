@@ -3,23 +3,6 @@ package models
 import "time"
 
 // easyjson:json
-type Error struct {
-	Message string `json:"message"`
-}
-
-// easyjson:json
-type Forum struct {
-	Posts   int64  `json:"posts"`
-	Slug    string `json:"slug"`
-	Threads int32  `json:"threads"`
-	Title   string `json:"title"`
-	User    string `json:"user"`
-}
-
-// easyjson:json
-type ForumList []Forum
-
-// easyjson:json
 type Post struct {
 	Author   string    `json:"author"`
 	Created  time.Time `json:"created"`
@@ -33,14 +16,6 @@ type Post struct {
 
 // easyjson:json
 type PostList []Post
-
-// easyjson:json
-type Status struct {
-	Forum  int32 `json:"forum"`
-	Post   int64 `json:"post"`
-	Thread int32 `json:"thread"`
-	User   int32 `json:"user"`
-}
 
 // easyjson:json
 type Thread struct {
@@ -58,6 +33,18 @@ type Thread struct {
 type ThreadList []Thread
 
 // easyjson:json
+type Forum struct {
+	Posts   int64  `json:"posts"`
+	Slug    string `json:"slug"`
+	Threads int32  `json:"threads"`
+	Title   string `json:"title"`
+	User    string `json:"user"`
+}
+
+// easyjson:json
+type ForumList []Forum
+
+// easyjson:json
 type User struct {
 	About    string `json:"about"`
 	Email    string `json:"email"`
@@ -67,6 +54,14 @@ type User struct {
 
 // easyjson:json
 type UserList []User
+
+// easyjson:json
+type PostDetail struct {
+	Author *User   `json:"author"`
+	Forum  *Forum  `json:"forum"`
+	Post   *Post   `json:"post"`
+	Thread *Thread `json:"thread"`
+}
 
 // easyjson:json
 type Vote struct {
@@ -79,9 +74,14 @@ type Vote struct {
 type VoteList []Vote
 
 // easyjson:json
-type PostDetail struct {
-	Author *User   `json:"author"`
-	Forum  *Forum  `json:"forum"`
-	Post   *Post   `json:"post"`
-	Thread *Thread `json:"thread"`
+type Status struct {
+	Forum  int32 `json:"forum"`
+	Post   int64 `json:"post"`
+	Thread int32 `json:"thread"`
+	User   int32 `json:"user"`
+}
+
+// easyjson:json
+type Error struct {
+	Message string `json:"message"`
 }

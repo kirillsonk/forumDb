@@ -27,7 +27,7 @@ func ServiceStatus(w http.ResponseWriter, r *http.Request) { //правил if �
 	return
 }
 
-func ServiceClear(w http.ResponseWriter, r *http.Request) {
+func ClearService(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return

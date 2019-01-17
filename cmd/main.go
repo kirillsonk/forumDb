@@ -46,13 +46,13 @@ func main() {
 
 	router.HandleFunc(`/api/post/{id}/details`, Post.PostDetails)
 
-	router.HandleFunc(`/api/service/clear`, CommonService.ServiceClear)
+	router.HandleFunc(`/api/service/clear`, CommonService.ClearService)
 	router.HandleFunc(`/api/service/status`, CommonService.ServiceStatus)
 
 	router.HandleFunc(`/api/thread/{slug_or_id}/create`, Post.CreatePost)
 	router.HandleFunc(`/api/thread/{slug_or_id}/details`, Thread.ThreadDetails)
-	router.HandleFunc(`/api/thread/{slug_or_id}/posts`, Thread.ThreadPosts)
-	router.HandleFunc(`/api/thread/{slug_or_id}/vote`, Vote.ThreadVote)
+	router.HandleFunc(`/api/thread/{slug_or_id}/posts`, Thread.PostsThread)
+	router.HandleFunc(`/api/thread/{slug_or_id}/vote`, Vote.VoteThread)
 
 	router.HandleFunc(`/api/user/{nickname}/create`, User.UserCreate)
 	router.HandleFunc(`/api/user/{nickname}/profile`, User.UserProfile)

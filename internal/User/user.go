@@ -1,11 +1,10 @@
 package User
 
 import (
+	"database/sql"
 	"forum-database/db"
 	"forum-database/internal/Errors"
 	"forum-database/models"
-	"database/sql"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -165,7 +164,7 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 	t, err := dbConn.Begin()
 
 	if err != nil {
-		fmt.Println("set local begin ", err.Error())
+		// fmt.Println("set local begin ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -173,7 +172,7 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 	_, err = t.Exec("SET LOCAL synchronous_commit TO OFF")
 
 	if err != nil {
-		fmt.Println("db.begin ", err.Error())
+		// fmt.Println("db.begin ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -186,7 +185,7 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 		&user.Email, &user.FullName, &user.NickName)
 
 	if err != nil {
-		fmt.Println(err.Error())
+		// fmt.Println(err.Error())
 		errorName := err.(*pq.Error).Code.Name()
 
 		if errorName == "unique_violation" {

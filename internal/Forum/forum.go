@@ -2,7 +2,6 @@ package Forum
 
 import (
 	"database/sql"
-	"fmt"
 	"forum-database/db"
 	"forum-database/internal/Errors"
 	"forum-database/internal/User"
@@ -254,7 +253,7 @@ func CreateForum(w http.ResponseWriter, r *http.Request) {
 		t, err := dbConn.Begin()
 
 		if err != nil {
-			fmt.Println("db.begin ", err.Error())
+			// fmt.Println("db.begin ", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -264,7 +263,7 @@ func CreateForum(w http.ResponseWriter, r *http.Request) {
 		_, err = t.Exec("SET LOCAL synchronous_commit TO OFF")
 
 		if err != nil {
-			fmt.Println("set local ", err.Error())
+			// fmt.Println("set local ", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -295,7 +294,7 @@ func CreateForum(w http.ResponseWriter, r *http.Request) {
 				err := row.Scan(&fr.Posts, &fr.Slug, &fr.Threads, &fr.Title, &fr.User)
 
 				if err != nil {
-					fmt.Println(err.Error())
+					// fmt.Println(err.Error())
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}

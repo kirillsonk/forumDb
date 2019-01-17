@@ -40,7 +40,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 		dbc, err := dbConnection.Begin()
 
 		if err != nil {
-			fmt.Println("db.begin ", err.Error())
+			// fmt.Println("db.begin ", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -48,12 +48,12 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 		_, err = dbc.Exec("SET LOCAL synchronous_commit TO OFF")
 
 		if err != nil {
-			fmt.Println("set local ", err.Error())
+			// fmt.Println("set local ", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		Thread, err := Thread.GetThread(IdorSlug)
+		Thread, err := Thread.GetThreadByIdOrSlug(IdorSlug)
 
 		if err != nil {
 			Errors.SendError("Can't find thread with id "+IdorSlug, http.StatusNotFound, &w)
@@ -101,7 +101,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			errorName := err.(*pq.Error).Code.Name()
 
-			fmt.Println(errorName)
+			// fmt.Println(errorName)
 			if err.Error() == "pq: Parent Post exc" {
 				Errors.SendError("Parent Post was created in another thread", http.StatusConflict, &w)
 				return
@@ -400,7 +400,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		fmt.Println(err.Error())
+		// fmt.Println(err.Error())
 		Errors.SendError("Can't find Post with id "+id, http.StatusNotFound, &w)
 		return
 	}
