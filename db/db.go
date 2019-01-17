@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	user     = "Sonk"
-	password = "k123"
-	dbname   = "forumdb"
-	// user     = "docker"
-	// password = "docker"
-	// dbname   = "docker"
+	// user     = "Sonk"
+	// password = "k123"
+	// dbname   = "forumdb"
+	user     = "docker"
+	password = "docker"
+	dbname   = "docker"
 )
 
 var db *sql.DB
