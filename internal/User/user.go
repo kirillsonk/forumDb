@@ -42,7 +42,6 @@ func UserProfile(w http.ResponseWriter, r *http.Request) {
 			Errors.SendError("Can't find user with nickname "+usrNick, http.StatusNotFound, &w)
 			return
 		}
-
 		resData, _ := Usr.MarshalJSON()
 		w.Write(resData)
 		return
@@ -65,20 +64,20 @@ func UserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	about := false
-	fullname := false
+	fullName := false
 	email := false
 
 	if userUpdate.About != "" {
 		about = true
 	}
 	if userUpdate.Fullname != "" {
-		fullname = true
+		fullName = true
 	}
 	if userUpdate.Email != "" {
 		email = true
 	}
 
-	if !email && !fullname && !about {
+	if !email && !fullName && !about {
 		Usr, err := GetUserByNick(usrNick)
 
 		if err != nil {
@@ -93,25 +92,25 @@ func UserProfile(w http.ResponseWriter, r *http.Request) {
 	var qr string
 	var qrRow *sql.Row
 
-	if about && fullname && email {
+	if about && email && fullName {
 		qr = "UPDATE users SET about=$1, fullname=$2, email=$3 WHERE nickname=$4 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.About, userUpdate.Fullname, userUpdate.Email, usrNick})
-	} else if about && fullname && !email {
+	} else if about && !email && fullName {
 		qr = "UPDATE users SET about=$1, fullname=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.About, userUpdate.Fullname, usrNick})
-	} else if about && !fullname && !email {
+	} else if about && !email && !fullName {
 		qr = "UPDATE users SET about=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.About, usrNick})
-	} else if about && !fullname && email {
+	} else if about && email && !fullName {
 		qr = "UPDATE users SET about=$1, email=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.About, userUpdate.Email, usrNick})
-	} else if !about && fullname && email {
+	} else if !about && email && fullName {
 		qr = "UPDATE users SET fullname=$1, email=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.Fullname, userUpdate.Email, usrNick})
-	} else if !about && !fullname && email {
+	} else if !about && email && !fullName {
 		qr = "UPDATE users SET email=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.Email, usrNick})
-	} else if !about && fullname && !email {
+	} else if !about && !email && fullName {
 		qr = "UPDATE users SET fullname=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.Fullname, usrNick})
 	}
