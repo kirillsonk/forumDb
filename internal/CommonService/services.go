@@ -1,9 +1,12 @@
 package CommonService
 
 import (
-	"forum-database/db"
-	"forum-database/models"
+	// "forum-database/db"
+	// "forum-database/models"
 	"net/http"
+
+	"bitbucket.org/kirillsonk/forum-database/db"
+	"bitbucket.org/kirillsonk/forum-database/models"
 )
 
 func ServiceStatus(w http.ResponseWriter, r *http.Request) { //правил if для метода GET

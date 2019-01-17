@@ -1,14 +1,23 @@
 package main
 
 import (
-	"forum-database/db"
-	"forum-database/internal/CommonService"
-	"forum-database/internal/Forum"
-	"forum-database/internal/Post"
-	"forum-database/internal/Thread"
-	"forum-database/internal/User"
-	"forum-database/internal/Vote"
+	// "forum-database/db"
+	// "forum-database/internal/CommonService"
+	// "forum-database/internal/Forum"
+	// "forum-database/internal/Post"
+	// "forum-database/internal/Thread"
+	// "forum-database/internal/User"
+	// "forum-database/internal/Vote"
+
 	"net/http"
+
+	"bitbucket.org/kirillsonk/forum-database/CommonService"
+	"bitbucket.org/kirillsonk/forum-database/Forum"
+	"bitbucket.org/kirillsonk/forum-database/Post"
+	"bitbucket.org/kirillsonk/forum-database/Thread"
+	"bitbucket.org/kirillsonk/forum-database/User"
+	"bitbucket.org/kirillsonk/forum-database/Vote"
+	"bitbucket.org/kirillsonk/forum-database/db"
 
 	"github.com/gorilla/mux"
 )

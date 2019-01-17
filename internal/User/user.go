@@ -2,11 +2,15 @@ package User
 
 import (
 	"database/sql"
-	"forum-database/db"
-	"forum-database/internal/Errors"
-	"forum-database/models"
+	// "forum-database/db"
+	// "forum-database/internal/Errors"
+	// "forum-database/models"
 	"io/ioutil"
 	"net/http"
+
+	"bitbucket.org/kirillsonk/forum-database/Errors"
+	"bitbucket.org/kirillsonk/forum-database/db"
+	"bitbucket.org/kirillsonk/forum-database/models"
 
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
