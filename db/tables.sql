@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS ForumUser, Vote, Thread, Post, Forum, Users CASCADE;
+-- DROP TABLE IF EXISTS ForumUser, Vote, Thread, Post, Forum, Users CASCADE;
 CREATE EXTENSION IF NOT EXISTS citext;
 SET LOCAL synchronous_commit TO OFF;
 

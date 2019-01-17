@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-MAINTAINER Grisha23
+MAINTAINER kirillsonk
 
 # Установка postgresql
 RUN apt-get -y update
@@ -59,4 +59,4 @@ EXPOSE 5000
 
 
 CMD service postgresql start &&\
-ForumsApi
+forum-database
