@@ -10,7 +10,7 @@ func ServiceStatus(w http.ResponseWriter, r *http.Request) { //правил if �
 	if r.Method == http.MethodGet {
 		w.Header().Set("content-type", "application/json")
 
-		row := db.DbQueryRow("SELECT t1.cnt c1, t2.cnt c2, t3.cnt c3, t4.cnt c4 FROM (SELECT count(*) cnt FROM users) t1, (SELECT COUNT(*) cnt FROM forums) t2, (SELECT COUNT(*) cnt FROM posts) t3, (SELECT COUNT(*) cnt FROM threads) t4", nil)
+		row := db.DbQueryRow("SELECT t1.cnt c1, t2.cnt c2, t3.cnt c3, t4.cnt c4 FROM (SELECT count(*) cnt FROM Users) t1, (SELECT COUNT(*) cnt FROM Forum) t2, (SELECT COUNT(*) cnt FROM Post) t3, (SELECT COUNT(*) cnt FROM Thread) t4", nil)
 		status := models.Status{}
 		err := row.Scan(&status.User, &status.Forum, &status.Post, &status.Thread)
 
@@ -33,7 +33,7 @@ func ClearService(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db.DbExec("TRUNCATE TABLE votes, users, posts, threads, forums, forum_users", nil)
+	db.DbExec("TRUNCATE TABLE Vote, Users, Post, Thread, Forum, ForumUser", nil)
 	w.WriteHeader(http.StatusOK)
 	return
 }

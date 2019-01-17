@@ -75,9 +75,9 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		responseQuery := "INSERT INTO posts(author, forum, message, parent, thread) VALUES "
+		responseQuery := "INSERT INTO Post(author, forum, message, parent, thread) VALUES "
 
-		UsersForumInsert := "INSERT INTO forum_users(forum,author) VALUES "
+		UsersForumInsert := "INSERT INTO ForumUser(forum,author) VALUES "
 
 		var subQuery []string
 		var UsersForumSubQuery []string
@@ -188,7 +188,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if Post.Message == "" {
-			row := db.DbQueryRow("SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE id=$1", []interface{}{id})
+			row := db.DbQueryRow("SELECT author,created,forum,id,isedited,message,parent,thread FROM Post WHERE id=$1", []interface{}{id})
 
 			err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread)
 
@@ -201,7 +201,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 			w.Write(resData)
 			return
 		}
-		row := db.DbQueryRow("UPDATE posts SET message=$1, isedited=true WHERE id=$2 RETURNING author,created,forum,id,isedited,message,parent,thread", []interface{}{Post.Message, id})
+		row := db.DbQueryRow("UPDATE Post SET message=$1, isedited=true WHERE id=$2 RETURNING author,created,forum,id,isedited,message,parent,thread", []interface{}{Post.Message, id})
 		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread)
 
 		if err != nil {
@@ -243,7 +243,7 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 
 	if !relatedThr && !relatedUsr && !relatedFrm {
 		Post := new(models.Post)
-		row := db.DbQueryRow("SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE id=$1;", []interface{}{id})
+		row := db.DbQueryRow("SELECT author,created,forum,id,isedited,message,parent,thread FROM Post WHERE id=$1;", []interface{}{id})
 
 		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread)
 
@@ -251,8 +251,8 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 
 	} else if !relatedUsr && !relatedThr && relatedFrm {
 
-		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, frm.posts, frm.slug, frm.threads, frm.title, frm.author FROM posts psts " +
-			"JOIN forums frm ON psts.id=$1 AND psts.forum=frm.slug"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, frm.posts, frm.slug, frm.threads, frm.title, frm.author FROM Post psts " +
+			"JOIN Forum frm ON psts.id=$1 AND psts.forum=frm.slug"
 		row := db.DbQueryRow(query, []interface{}{id})
 
 		Forum := new(models.Forum)
@@ -266,8 +266,8 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 
 	} else if !relatedUsr && relatedThr && !relatedFrm {
 
-		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, thrs.id, thrs.author, thrs.created, thrs.forum, thrs.message, thrs.slug, thrs.title, thrs.votes FROM posts psts " +
-			"JOIN threads thrs ON psts.id=$1 AND psts.thread=thrs.id"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, thrs.id, thrs.author, thrs.created, thrs.forum, thrs.message, thrs.slug, thrs.title, thrs.votes FROM Post psts " +
+			"JOIN Thread thrs ON psts.id=$1 AND psts.thread=thrs.id"
 		row := db.DbQueryRow(query, []interface{}{id})
 
 		Thread := new(models.Thread)
@@ -287,8 +287,8 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 
 	} else if !relatedUsr && relatedThr && relatedFrm {
 
-		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, thrs.id, thrs.author, thrs.created, thrs.forum, thrs.message, thrs.slug, thrs.title, thrs.votes,  frm.posts, frm.slug, frm.threads, frm.title, frm.author  FROM posts psts " +
-			"JOIN threads thrs ON psts.id=$1 AND psts.thread=thrs.id JOIN forums frm ON psts.forum=frm.slug"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, thrs.id, thrs.author, thrs.created, thrs.forum, thrs.message, thrs.slug, thrs.title, thrs.votes,  frm.posts, frm.slug, frm.threads, frm.title, frm.author  FROM Post psts " +
+			"JOIN Thread thrs ON psts.id=$1 AND psts.thread=thrs.id JOIN Forum frm ON psts.forum=frm.slug"
 		row := db.DbQueryRow(query, []interface{}{id})
 
 		Thread := new(models.Thread)
@@ -311,8 +311,8 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 
 	} else if relatedUsr && !relatedThr && !relatedFrm {
 
-		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, usrs.about, usrs.email, usrs.fullname, usrs.nickname FROM posts psts " +
-			"JOIN users usrs ON psts.id=$1 AND usrs.nickname=psts.author"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, usrs.about, usrs.email, usrs.fullname, usrs.nickname FROM Post psts " +
+			"JOIN Users usrs ON psts.id=$1 AND usrs.nickname=psts.author"
 		row := db.DbQueryRow(query, []interface{}{id})
 
 		User := new(models.User)
@@ -326,9 +326,9 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 
 	} else if relatedUsr && !relatedThr && relatedFrm {
 
-		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, usrs.about, usrs.email, usrs.fullname, usrs.nickname, frm.posts, frm.slug, frm.threads, frm.title, frm.author   FROM posts psts " +
-			"JOIN users usrs ON psts.id=$1 AND usrs.nickname=psts.author " +
-			"JOIN forums frm ON psts.forum=frm.slug"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, usrs.about, usrs.email, usrs.fullname, usrs.nickname, frm.posts, frm.slug, frm.threads, frm.title, frm.author   FROM Post psts " +
+			"JOIN Users usrs ON psts.id=$1 AND usrs.nickname=psts.author " +
+			"JOIN Forum frm ON psts.forum=frm.slug"
 		row := db.DbQueryRow(query, []interface{}{id})
 
 		User := new(models.User)
@@ -345,9 +345,9 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 
 	} else if relatedUsr && relatedThr && !relatedFrm {
 
-		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, usrs.about, usrs.email, usrs.fullname, usrs.nickname,  thrs.id, thrs.author, thrs.created, thrs.forum, thrs.message, thrs.slug, thrs.title, thrs.votes FROM posts psts " +
-			"JOIN users usrs ON psts.id=$1 AND usrs.nickname=psts.author " +
-			"JOIN threads thrs ON psts.thread=thrs.id"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, usrs.about, usrs.email, usrs.fullname, usrs.nickname,  thrs.id, thrs.author, thrs.created, thrs.forum, thrs.message, thrs.slug, thrs.title, thrs.votes FROM Post psts " +
+			"JOIN Users usrs ON psts.id=$1 AND usrs.nickname=psts.author " +
+			"JOIN Thread thrs ON psts.thread=thrs.id"
 		row := db.DbQueryRow(query, []interface{}{id})
 
 		User := new(models.User)
@@ -370,10 +370,10 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 
 	} else if relatedUsr && relatedThr && relatedFrm {
 
-		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, usrs.about, usrs.email, usrs.fullname, usrs.nickname,  thrs.id, thrs.author, thrs.created, thrs.forum, thrs.message, thrs.slug, thrs.title, thrs.votes , frm.posts, frm.slug, frm.threads, frm.title, frm.author FROM posts psts " +
-			"JOIN users usrs ON psts.id=$1 AND usrs.nickname=psts.author " +
-			"JOIN threads thrs ON psts.thread=thrs.id " +
-			"JOIN forums frm ON psts.forum=frm.slug"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, usrs.about, usrs.email, usrs.fullname, usrs.nickname,  thrs.id, thrs.author, thrs.created, thrs.forum, thrs.message, thrs.slug, thrs.title, thrs.votes , frm.posts, frm.slug, frm.threads, frm.title, frm.author FROM Post psts " +
+			"JOIN Users usrs ON psts.id=$1 AND usrs.nickname=psts.author " +
+			"JOIN Thread thrs ON psts.thread=thrs.id " +
+			"JOIN Forum frm ON psts.forum=frm.slug"
 		row := db.DbQueryRow(query, []interface{}{id})
 
 		User := new(models.User)

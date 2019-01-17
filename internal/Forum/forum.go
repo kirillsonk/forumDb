@@ -49,37 +49,37 @@ func UsersForum(w http.ResponseWriter, r *http.Request) { //+
 		}
 
 		if !lim && !since && !dsc {
-			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 ORDER BY nickname ASC"
+			data := "SELECT about,email,fullname,nickname FROM ForumUser frm_usr JOIN Users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 ORDER BY nickname ASC"
 
 			rowsData, err = db.DbQuery(data, []interface{}{slug})
 		} else if !lim && !since && dsc {
-			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 ORDER BY nickname DESC "
+			data := "SELECT about,email,fullname,nickname FROM ForumUser frm_usr JOIN Users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 ORDER BY nickname DESC "
 
 			rowsData, err = db.DbQuery(data, []interface{}{slug})
 		} else if !lim && since && !dsc {
-			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 AND usr.nickname>$2 ORDER BY nickname ASC"
+			data := "SELECT about,email,fullname,nickname FROM ForumUser frm_usr JOIN Users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 AND usr.nickname>$2 ORDER BY nickname ASC"
 
 			rowsData, err = db.DbQuery(data, []interface{}{slug, sinceValue})
 
 		} else if !lim && since && dsc {
-			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 AND usr.nickname<$2 ORDER BY nickname DESC "
+			data := "SELECT about,email,fullname,nickname FROM ForumUser frm_usr JOIN Users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 AND usr.nickname<$2 ORDER BY nickname DESC "
 			rowsData, err = db.DbQuery(data, []interface{}{slug, sinceValue})
 
 		} else if lim && !since && !dsc {
-			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 ORDER BY nickname ASC LIMIT $2"
+			data := "SELECT about,email,fullname,nickname FROM ForumUser frm_usr JOIN Users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 ORDER BY nickname ASC LIMIT $2"
 			rowsData, err = db.DbQuery(data, []interface{}{slug, limitValue})
 
 		} else if lim && !since && dsc {
-			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 ORDER BY nickname DESC LIMIT $2"
+			data := "SELECT about,email,fullname,nickname FROM ForumUser frm_usr JOIN Users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 ORDER BY nickname DESC LIMIT $2"
 			rowsData, err = db.DbQuery(data, []interface{}{slug, limitValue})
 
 		} else if lim && since && !dsc {
-			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 AND usr.nickname>$2 ORDER BY nickname ASC LIMIT $3"
+			data := "SELECT about,email,fullname,nickname FROM ForumUser frm_usr JOIN Users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 AND usr.nickname>$2 ORDER BY nickname ASC LIMIT $3"
 
 			rowsData, err = db.DbQuery(data, []interface{}{slug, sinceValue, limitValue})
 
 		} else if lim && since && dsc {
-			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 AND usr.nickname<$2 ORDER BY nickname DESC LIMIT $3"
+			data := "SELECT about,email,fullname,nickname FROM ForumUser frm_usr JOIN Users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 AND usr.nickname<$2 ORDER BY nickname DESC LIMIT $3"
 
 			rowsData, err = db.DbQuery(data, []interface{}{slug, sinceValue, limitValue})
 
@@ -142,23 +142,23 @@ func ThreadsForum(w http.ResponseWriter, r *http.Request) {
 		var err error
 
 		if lim && !since && !dsc {
-			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 ORDER BY created LIMIT $2;", []interface{}{slug, limitValue})
+			rowsData, err = db.DbQuery("SELECT * FROM Thread WHERE forum = $1 ORDER BY created LIMIT $2;", []interface{}{slug, limitValue})
 		} else if since && !lim && !dsc {
-			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created <= $2 ORDER BY created;", []interface{}{slug, sinceValue})
+			rowsData, err = db.DbQuery("SELECT * FROM Thread WHERE forum = $1 AND created <= $2 ORDER BY created;", []interface{}{slug, sinceValue})
 		} else if lim && since && !dsc {
-			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created >= $2 ORDER BY created LIMIT $3;", []interface{}{slug, sinceValue, limitValue})
+			rowsData, err = db.DbQuery("SELECT * FROM Thread WHERE forum = $1 AND created >= $2 ORDER BY created LIMIT $3;", []interface{}{slug, sinceValue, limitValue})
 		} else if lim && !since && dsc {
-			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 ORDER BY created DESC LIMIT $2;", []interface{}{slug, limitValue})
+			rowsData, err = db.DbQuery("SELECT * FROM Thread WHERE forum = $1 ORDER BY created DESC LIMIT $2;", []interface{}{slug, limitValue})
 		} else if since && !lim && dsc {
-			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created <= $2 ORDER BY created DESC;", []interface{}{slug, sinceValue})
+			rowsData, err = db.DbQuery("SELECT * FROM Thread WHERE forum = $1 AND created <= $2 ORDER BY created DESC;", []interface{}{slug, sinceValue})
 		} else if lim && since && dsc {
-			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created <= $2 ORDER BY created DESC LIMIT $3;", []interface{}{slug, sinceValue, limitValue})
+			rowsData, err = db.DbQuery("SELECT * FROM Thread WHERE forum = $1 AND created <= $2 ORDER BY created DESC LIMIT $3;", []interface{}{slug, sinceValue, limitValue})
 		} else if lim && since && !dsc {
-			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created >= $2 ORDER BY created LIMIT $3;", []interface{}{slug, sinceValue, limitValue})
+			rowsData, err = db.DbQuery("SELECT * FROM Thread WHERE forum = $1 AND created >= $2 ORDER BY created LIMIT $3;", []interface{}{slug, sinceValue, limitValue})
 		} else if !lim && !since && !dsc {
-			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 ORDER BY created;", []interface{}{slug})
+			rowsData, err = db.DbQuery("SELECT * FROM Thread WHERE forum = $1 ORDER BY created;", []interface{}{slug})
 		} else {
-			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 ORDER BY created;", []interface{}{slug})
+			rowsData, err = db.DbQuery("SELECT * FROM Thread WHERE forum = $1 ORDER BY created;", []interface{}{slug})
 		}
 
 		if err != nil {
@@ -217,7 +217,7 @@ func forumBySlugOrID(slugOrId string, t *sql.Tx) (*models.Forum, error) {
 	Forum := models.Forum{}
 
 	var err error
-	err = db.DbQueryRow("SELECT * FROM forums WHERE slug=$1", []interface{}{slugOrId}).Scan(&Forum.Posts, &Forum.Slug, &Forum.Threads, &Forum.Title, &Forum.User)
+	err = db.DbQueryRow("SELECT * FROM Forum WHERE slug=$1", []interface{}{slugOrId}).Scan(&Forum.Posts, &Forum.Slug, &Forum.Threads, &Forum.Title, &Forum.User)
 
 	if err != nil {
 		return nil, err
@@ -278,7 +278,7 @@ func CreateForum(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		row := t.QueryRow("INSERT INTO forums(slug, title, author) VALUES ($1, $2, $3) RETURNING *", []interface{}{Forum.Slug, Forum.Title, existUser.Nickname}...)
+		row := t.QueryRow("INSERT INTO Forum(slug, title, author) VALUES ($1, $2, $3) RETURNING *", []interface{}{Forum.Slug, Forum.Title, existUser.Nickname}...)
 
 		err = row.Scan(&Forum.Posts, &Forum.Slug, &Forum.Threads, &Forum.Title, &Forum.User)
 
@@ -289,7 +289,7 @@ func CreateForum(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if errorName == "unique_violation" {
-				row := db.DbQueryRow("SELECT * FROM forums WHERE slug=$1", []interface{}{Forum.Slug})
+				row := db.DbQueryRow("SELECT * FROM Forum WHERE slug=$1", []interface{}{Forum.Slug})
 				fr := models.Forum{}
 				err := row.Scan(&fr.Posts, &fr.Slug, &fr.Threads, &fr.Title, &fr.User)
 

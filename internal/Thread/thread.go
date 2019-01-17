@@ -53,15 +53,15 @@ func PostsThread(w http.ResponseWriter, r *http.Request) {
 	if sortValue == "flat" {
 		if dsc {
 			if since {
-				rows, err = db.DbQuery("SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE thread = $1 AND id < $3 ORDER BY created DESC, id DESC LIMIT $2", []interface{}{Thread.Id, limitValue, sinceValue})
+				rows, err = db.DbQuery("SELECT author,created,forum,id,isedited,message,parent,thread FROM Post WHERE thread = $1 AND id < $3 ORDER BY created DESC, id DESC LIMIT $2", []interface{}{Thread.Id, limitValue, sinceValue})
 			} else {
-				rows, err = db.DbQuery("SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE thread = $1 ORDER BY id DESC LIMIT $2", []interface{}{Thread.Id, limitValue})
+				rows, err = db.DbQuery("SELECT author,created,forum,id,isedited,message,parent,thread FROM Post WHERE thread = $1 ORDER BY id DESC LIMIT $2", []interface{}{Thread.Id, limitValue})
 			}
 		} else {
 			if since {
-				rows, err = db.DbQuery("SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE thread = $1 AND id > $3 ORDER BY id ASC LIMIT $2", []interface{}{Thread.Id, limitValue, sinceValue})
+				rows, err = db.DbQuery("SELECT author,created,forum,id,isedited,message,parent,thread FROM Post WHERE thread = $1 AND id > $3 ORDER BY id ASC LIMIT $2", []interface{}{Thread.Id, limitValue, sinceValue})
 			} else {
-				query := "SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE thread = $1 ORDER BY id ASC LIMIT " + limitValue
+				query := "SELECT author,created,forum,id,isedited,message,parent,thread FROM Post WHERE thread = $1 ORDER BY id ASC LIMIT " + limitValue
 				rows, err = db.DbQuery(query, []interface{}{Thread.Id})
 			}
 		}
@@ -79,20 +79,20 @@ func PostsThread(w http.ResponseWriter, r *http.Request) {
 			descFlag = " desc "
 			sortAdd = "ORDER BY id_array[1] DESC, id_array "
 			if since != false {
-				sinceAdd = " AND id_array[1] < (SELECT id_array[1] FROM posts WHERE id = " + sinceValue + " ) "
+				sinceAdd = " AND id_array[1] < (SELECT id_array[1] FROM Post WHERE id = " + sinceValue + " ) "
 			}
 		} else {
 			descFlag = " ASC "
 			sortAdd = " ORDER BY id_array[1], id_array ASC"
 			if since != false {
-				sinceAdd = " AND id_array[1] > (SELECT id_array[1] FROM posts WHERE id = " + sinceValue + " ) "
+				sinceAdd = " AND id_array[1] > (SELECT id_array[1] FROM Post WHERE id = " + sinceValue + " ) "
 			}
 		}
 
 		query := "SELECT author,created,forum,id,isedited,message,parent,thread FROM (" +
 			" SELECT author,id_array,created,forum,id,isedited,message,parent,thread, " +
 			" dense_rank() over (ORDER BY id_array[1] " + descFlag + " ) AS rank " +
-			" FROM posts WHERE thread=$1 " + sinceAdd + " ) AS tree " + limitAdd + " " + sortAdd
+			" FROM Post WHERE thread=$1 " + sinceAdd + " ) AS tree " + limitAdd + " " + sortAdd
 
 		rows, err = db.DbQuery(query, []interface{}{Thread.Id})
 	} else if sortValue == "tree" {
@@ -107,16 +107,16 @@ func PostsThread(w http.ResponseWriter, r *http.Request) {
 		if dsc == true {
 			sortAdd = " ORDER BY id_array[0], id_array DESC "
 			if since != false {
-				sinceAdd = " AND id_array < (SELECT id_array FROM posts WHERE id = " + sinceValue + " ) "
+				sinceAdd = " AND id_array < (SELECT id_array FROM Post WHERE id = " + sinceValue + " ) "
 			}
 		} else {
 			sortAdd = " ORDER BY id_array[0],id_array "
 			if since != false {
-				sinceAdd = " AND id_array > (SELECT id_array FROM posts WHERE id = " + sinceValue + " ) "
+				sinceAdd = " AND id_array > (SELECT id_array FROM Post WHERE id = " + sinceValue + " ) "
 			}
 		}
 
-		query := "SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE thread=$1 " + sinceAdd + " " + sortAdd + " " + limitAdd
+		query := "SELECT author,created,forum,id,isedited,message,parent,thread FROM Post WHERE thread=$1 " + sinceAdd + " " + sortAdd + " " + limitAdd
 		rows, err = db.DbQuery(query, []interface{}{Thread.Id})
 	}
 
@@ -207,7 +207,7 @@ func ThreadDetails(w http.ResponseWriter, r *http.Request) {
 			idAdd = "id=" + strconv.Itoa(thrId)
 		}
 
-		data := "UPDATE threads SET " + txtAdd + add + titleAdd + " WHERE " + idAdd + " RETURNING *"
+		data := "UPDATE Thread SET " + txtAdd + add + titleAdd + " WHERE " + idAdd + " RETURNING *"
 		row = db.DbQueryRow(data, nil)
 
 		err = row.Scan(&Thread.Id, &Thread.Author, &Thread.Created, &Thread.Forum, &Thread.Message, &Thread.Slug, &Thread.Title, &Thread.Votes)
@@ -237,9 +237,9 @@ func GetThreadByIdOrSlug(slug string) (*models.Thread, error) {
 	var row *sql.Row
 
 	if err != nil {
-		row = db.DbQueryRow("SELECT * FROM threads WHERE slug=$1;", []interface{}{slug})
+		row = db.DbQueryRow("SELECT * FROM Thread WHERE slug=$1;", []interface{}{slug})
 	} else {
-		row = db.DbQueryRow("SELECT * FROM threads WHERE id=$1;", []interface{}{thrId})
+		row = db.DbQueryRow("SELECT * FROM Thread WHERE id=$1;", []interface{}{thrId})
 	}
 
 	var sqlSlug sql.NullString
@@ -299,12 +299,12 @@ func ThreadCreate(w http.ResponseWriter, r *http.Request) {
 
 	var row *sql.Row
 	if Thread.Slug == "" {
-		row = dbc.QueryRow("INSERT INTO threads(author, created, forum, message, title) VALUES ($1, $2, "+
-			"(SELECT slug FROM forums WHERE slug=$3), $4, $5) RETURNING *", Thread.Author, Thread.Created, slug,
+		row = dbc.QueryRow("INSERT INTO Thread(author, created, forum, message, title) VALUES ($1, $2, "+
+			"(SELECT slug FROM Forum WHERE slug=$3), $4, $5) RETURNING *", Thread.Author, Thread.Created, slug,
 			Thread.Message, Thread.Title)
 	} else {
-		row = dbc.QueryRow("INSERT INTO threads(author, created, forum, message, title, slug) VALUES ($1, $2, "+
-			"(SELECT slug FROM forums WHERE slug=$3), $4, $5, $6) RETURNING *", Thread.Author, Thread.Created, slug,
+		row = dbc.QueryRow("INSERT INTO Thread(author, created, forum, message, title, slug) VALUES ($1, $2, "+
+			"(SELECT slug FROM Forum WHERE slug=$3), $4, $5, $6) RETURNING *", Thread.Author, Thread.Created, slug,
 			Thread.Message, Thread.Title, Thread.Slug)
 	}
 
@@ -332,7 +332,7 @@ func ThreadCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = dbc.Exec("INSERT INTO forum_users(forum,author) VALUES ($1,$2) ON CONFLICT DO NOTHING", slug, Thread.Author)
+	_, err = dbc.Exec("INSERT INTO ForumUser(forum,author) VALUES ($1,$2) ON CONFLICT DO NOTHING", slug, Thread.Author)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

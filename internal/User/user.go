@@ -19,7 +19,7 @@ func GetUserByNick(nick string) (*models.User, error) {
 
 	var qrRow *sql.Row
 
-	qrRow = db.DbQueryRow("SELECT about,email,fullname,nickname FROM users WHERE nickname=$1", []interface{}{nick})
+	qrRow = db.DbQueryRow("SELECT about,email,fullname,nickname FROM Users WHERE nickname=$1", []interface{}{nick})
 	Usr := models.User{}
 	err := qrRow.Scan(&Usr.About, &Usr.Email, &Usr.Fullname, &Usr.Nickname)
 
@@ -93,25 +93,25 @@ func UserProfile(w http.ResponseWriter, r *http.Request) {
 	var qrRow *sql.Row
 
 	if about && email && fullName {
-		qr = "UPDATE users SET about=$1, fullname=$2, email=$3 WHERE nickname=$4 RETURNING about,email,fullname,nickname"
+		qr = "UPDATE Users SET about=$1, fullname=$2, email=$3 WHERE nickname=$4 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.About, userUpdate.Fullname, userUpdate.Email, usrNick})
 	} else if about && !email && fullName {
-		qr = "UPDATE users SET about=$1, fullname=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
+		qr = "UPDATE Users SET about=$1, fullname=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.About, userUpdate.Fullname, usrNick})
 	} else if about && !email && !fullName {
-		qr = "UPDATE users SET about=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
+		qr = "UPDATE Users SET about=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.About, usrNick})
 	} else if about && email && !fullName {
-		qr = "UPDATE users SET about=$1, email=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
+		qr = "UPDATE Users SET about=$1, email=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.About, userUpdate.Email, usrNick})
 	} else if !about && email && fullName {
-		qr = "UPDATE users SET fullname=$1, email=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
+		qr = "UPDATE Users SET fullname=$1, email=$2 WHERE nickname=$3 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.Fullname, userUpdate.Email, usrNick})
 	} else if !about && email && !fullName {
-		qr = "UPDATE users SET email=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
+		qr = "UPDATE Users SET email=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.Email, usrNick})
 	} else if !about && !email && fullName {
-		qr = "UPDATE users SET fullname=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
+		qr = "UPDATE Users SET fullname=$1 WHERE nickname=$2 RETURNING about,email,fullname,nickname"
 		qrRow = db.DbQueryRow(qr, []interface{}{userUpdate.Fullname, usrNick})
 	}
 
@@ -173,7 +173,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	defer dbc.Rollback()
 
-	qr := "INSERT INTO users(about, email, fullname, nickname) VALUES ($1,$2,$3,$4) RETURNING *"
+	qr := "INSERT INTO Users(about, email, fullname, nickname) VALUES ($1,$2,$3,$4) RETURNING *"
 
 	err = dbc.QueryRow(qr, Usr.About, Usr.Email, Usr.Fullname, Usr.Nickname).Scan(&Usr.About,
 		&Usr.Email, &Usr.Fullname, &Usr.Nickname)
@@ -185,7 +185,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		if errorName == "unique_violation" {
 			usrList := models.UserList{}
 
-			rows, err := db.DbQuery("SELECT * FROM users WHERE nickname=$1 OR email=$2", []interface{}{Usr.Nickname, Usr.Email})
+			rows, err := db.DbQuery("SELECT * FROM Users WHERE nickname=$1 OR email=$2", []interface{}{Usr.Nickname, Usr.Email})
 
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)

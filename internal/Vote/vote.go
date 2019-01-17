@@ -54,12 +54,12 @@ func VoteThread(w http.ResponseWriter, r *http.Request) {
 		threadId, err := strconv.Atoi(slugOrId)
 
 		if err != nil {
-			_, err = dbc.Exec("INSERT INTO votes(nickname, voice, thread) VALUES ($1,$2, (SELECT id FROM threads WHERE slug=$3)) "+
+			_, err = dbc.Exec("INSERT INTO Vote(nickname, voice, thread) VALUES ($1,$2, (SELECT id FROM Thread WHERE slug=$3)) "+
 				"ON CONFLICT (nickname, thread) DO "+
 				"UPDATE SET voice=$2",
 				vote.Nickname, vote.Voice, slugOrId)
 		} else {
-			_, err = dbc.Exec("INSERT INTO votes(nickname, voice, thread) VALUES ($1,$2,$3) "+
+			_, err = dbc.Exec("INSERT INTO Vote(nickname, voice, thread) VALUES ($1,$2,$3) "+
 				"ON CONFLICT (nickname, thread) DO "+
 				"UPDATE SET voice=$2",
 				vote.Nickname, vote.Voice, threadId)
