@@ -19,11 +19,11 @@ var db *sql.DB
 
 func InitDb() (*sql.DB, error) {
 	var err error
-	psqlInfo := fmt.Sprintf("user=%s "+
+	dbInfo := fmt.Sprintf("user=%s "+
 		"password=%s dbname=%s sslmode=disable",
 		user, password, dbname)
 
-	db, err = sql.Open("postgres", psqlInfo)
+	db, err = sql.Open("postgres", dbInfo)
 
 	if err != nil {
 		panic(err)
@@ -40,7 +40,7 @@ func InitDb() (*sql.DB, error) {
 		panic(err)
 	}
 
-	fmt.Println("You connected to your database")
+	fmt.Println("Connected to database")
 	return db, nil
 }
 

@@ -1,12 +1,12 @@
 package Post
 
 import (
+	"database/sql"
+	"fmt"
 	"forum-database/db"
 	"forum-database/internal/Errors"
 	"forum-database/internal/Thread"
 	"forum-database/models"
-	"database/sql"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -15,159 +15,155 @@ import (
 	"github.com/lib/pq"
 )
 
-func PostCreate(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("content-type", "application/json")
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
+func CreatePost(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		w.Header().Set("content-type", "application/json")
+		vars := mux.Vars(r)
+		IdorSlug := vars["slug_or_id"]
 
-	vars := mux.Vars(r)
-	slugOrId := vars["slug_or_id"]
-
-	body, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	postList := models.PostList{}
-	err = postList.UnmarshalJSON(body)
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	dbConn := db.GetLink()
-	t, err := dbConn.Begin()
-
-	if err != nil {
-		fmt.Println("db.begin ", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	_, err = t.Exec("SET LOCAL synchronous_commit TO OFF")
-
-	if err != nil {
-		fmt.Println("set local ", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	thr, err := Thread.GetThread(slugOrId)
-
-	if err != nil {
-		Errors.SendError("Can't find thread with id "+slugOrId+"\n", 404, &w)
-		return
-	}
-
-	defer t.Rollback()
-	if len(postList) == 0 {
-		data := models.PostList{}
-
-		resData, err := data.MarshalJSON()
+		body, err := ioutil.ReadAll(r.Body)
+		defer r.Body.Close()
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
+		postList := models.PostList{}
+		err = postList.UnmarshalJSON(body)
+
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		dbConnection := db.GetLink()
+		dbc, err := dbConnection.Begin()
+
+		if err != nil {
+			fmt.Println("db.begin ", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		_, err = dbc.Exec("SET LOCAL synchronous_commit TO OFF")
+
+		if err != nil {
+			fmt.Println("set local ", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		Thread, err := Thread.GetThread(IdorSlug)
+
+		if err != nil {
+			Errors.SendError("Can't find thread with id "+IdorSlug, http.StatusNotFound, &w)
+			return
+		}
+
+		defer dbc.Rollback()
+		if len(postList) == 0 {
+			data := models.PostList{}
+			resData, err := data.MarshalJSON()
+
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			w.WriteHeader(http.StatusCreated)
+			w.Write(resData)
+			return
+		}
+
+		responseQuery := "INSERT INTO posts(author, forum, message, parent, thread) VALUES "
+
+		UsersForumInsert := "INSERT INTO forum_users(forum,author) VALUES "
+
+		var subQuery []string
+		var UsersForumSubQuery []string
+
+		for _, Post := range postList {
+
+			values := fmt.Sprintf("('%s', '%s', '%s', %d, %d) ", Post.Author, Thread.Forum, Post.Message, Post.Parent, Thread.Id)
+
+			subQuery = append(subQuery, values)
+			UsersForumValues := fmt.Sprintf("('%s', '%s') ", Thread.Forum, Post.Author)
+			UsersForumSubQuery = append(UsersForumSubQuery, UsersForumValues)
+		}
+
+		responseQuery += strings.Join(subQuery, ",") + " RETURNING author,created,forum,id,isedited,message,parent,thread;"
+
+		UsersForumInsert += strings.Join(UsersForumSubQuery, ",") + " ON CONFLICT DO NOTHING;"
+
+		responseQuery += UsersForumInsert
+		rows, err := dbc.Query(responseQuery)
+
+		if err != nil {
+			errorName := err.(*pq.Error).Code.Name()
+
+			fmt.Println(errorName)
+			if err.Error() == "pq: Parent Post exc" {
+				Errors.SendError("Parent Post was created in another thread", http.StatusConflict, &w)
+				return
+			}
+
+			if errorName == "foreign_key_violation" {
+				Errors.SendError("Can't find parent Post", http.StatusNotFound, &w)
+				return
+			}
+
+			if errorName != "syntax_error" {
+				Errors.SendError("Can't find parent Post", http.StatusConflict, &w)
+				return
+			}
+
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// data := make([]models.Post, 0)
+		data := models.PostList{}
+
+		for rows.Next() {
+			addedPost := models.Post{}
+
+			err := rows.Scan(&addedPost.Author,
+				&addedPost.Created,
+				&addedPost.Forum,
+				&addedPost.Id,
+				&addedPost.IsEdited,
+				&addedPost.Message,
+				&addedPost.Parent,
+				&addedPost.Thread)
+
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			data = append(data, addedPost)
+		}
+
+		resData, err := data.MarshalJSON()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		dbc.Commit()
 		w.WriteHeader(http.StatusCreated)
 		w.Write(resData)
 		return
 	}
-
-	resQuery := "INSERT INTO posts(author, forum, message, parent, thread) VALUES "
-
-	forumUsersInsert := "INSERT INTO forum_users(forum,author) VALUES "
-
-	var subQuery []string
-	var forumUsersSubQuery []string
-
-	for _, p := range postList {
-
-		values := fmt.Sprintf("('%s', '%s', '%s', %d, %d) ", p.Author, thr.Forum, p.Message, p.Parent, thr.Id)
-
-		subQuery = append(subQuery, values)
-		forumUsersValues := fmt.Sprintf("('%s', '%s') ", thr.Forum, p.Author)
-		forumUsersSubQuery = append(forumUsersSubQuery, forumUsersValues)
-	}
-
-	resQuery += strings.Join(subQuery, ",") + " RETURNING author,created,forum,id,isedited,message,parent,thread;"
-
-	forumUsersInsert += strings.Join(forumUsersSubQuery, ",") + " ON CONFLICT DO NOTHING;"
-
-	resQuery += forumUsersInsert
-	rows, err := t.Query(resQuery)
-
-	if err != nil {
-		errorName := err.(*pq.Error).Code.Name()
-
-		fmt.Println(errorName)
-		if err.Error() == "pq: Parent post exc" {
-			Errors.SendError("Parent post was created in another thread \n", 409, &w)
-			return
-		}
-
-		if errorName == "foreign_key_violation" {
-			Errors.SendError("Can't find parent post \n", 404, &w)
-			return
-		}
-
-		if errorName != "syntax_error" {
-			Errors.SendError("Can't find parent post \n", 404, &w)
-			return
-		}
-
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// data := make([]models.Post, 0)
-	data := models.PostList{}
-
-	for rows.Next() {
-		newPost := models.Post{}
-
-		err := rows.Scan(&newPost.Author,
-			&newPost.Created,
-			&newPost.Forum,
-			&newPost.Id,
-			&newPost.IsEdited,
-			&newPost.Message,
-			&newPost.Parent,
-			&newPost.Thread)
-
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		data = append(data, newPost)
-	}
-
-	resData, err := data.MarshalJSON()
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	t.Commit()
-	w.WriteHeader(http.StatusCreated)
-	w.Write(resData)
 
 	return
 }
 
 func PostDetails(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")
-
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	related := r.URL.Query().Get("related")
+	rel := r.URL.Query().Get("related")
 
 	if r.Method == http.MethodPost {
 		body, err := ioutil.ReadAll(r.Body)
@@ -178,8 +174,8 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		post := new(models.Post)
-		err = post.UnmarshalJSON(body)
+		Post := new(models.Post)
+		err = Post.UnmarshalJSON(body)
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -187,226 +183,225 @@ func PostDetails(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err != nil {
-			Errors.SendError("Can't find post with id "+id+"\n", 404, &w)
+			Errors.SendError("Can't find Post with id "+id, http.StatusNotFound, &w)
 			return
 		}
 
-		if post.Message == "" {
+		if Post.Message == "" {
 			row := db.DbQueryRow("SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE id=$1", []interface{}{id})
 
-			err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
+			err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread)
 
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 
-			resData, _ := post.MarshalJSON()
+			resData, _ := Post.MarshalJSON()
 			w.Write(resData)
 			return
 		}
-		row := db.DbQueryRow("UPDATE posts SET message=$1, isedited=true WHERE id=$2 RETURNING author,created,forum,id,isedited,message,parent,thread", []interface{}{post.Message, id})
-		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
+		row := db.DbQueryRow("UPDATE posts SET message=$1, isedited=true WHERE id=$2 RETURNING author,created,forum,id,isedited,message,parent,thread", []interface{}{Post.Message, id})
+		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread)
 
 		if err != nil {
-			Errors.SendError("Can't find post with id "+id+"\n", 404, &w)
+			Errors.SendError("Can't find Post with id "+id, http.StatusNotFound, &w)
 			return
 		}
 
-		resData, _ := post.MarshalJSON()
+		resData, _ := Post.MarshalJSON()
 		w.Write(resData)
-
 		return
 	}
-	postDetail := models.PostDetail{}
 
-	var oblectsArr []string
-	objects := strings.Split(related, ",")
+	postDetail := models.PostDetail{}
+	var objArray []string
+	objects := strings.Split(rel, ",")
 	for index := range objects {
-		item := objects[index]
-		oblectsArr = append(oblectsArr, item)
+		itemData := objects[index]
+		objArray = append(objArray, itemData)
 	}
 
-	var relUser = false
-	var relThread = false
-	var relForum = false
+	var relatedFrm = false
+	var relatedUsr = false
+	var relatedThr = false
 
-	for index := range oblectsArr {
-		if oblectsArr[index] == "user" {
-			relUser = true
+	for index := range objArray {
+		if objArray[index] == "forum" {
+			relatedFrm = true
 		}
-		if oblectsArr[index] == "thread" {
-			relThread = true
+		if objArray[index] == "user" {
+			relatedUsr = true
 		}
-		if oblectsArr[index] == "forum" {
-			relForum = true
+		if objArray[index] == "thread" {
+			relatedThr = true
 		}
 	}
 
 	var err error
 	var sqlSlug sql.NullString
 
-	if !relUser && !relThread && !relForum {
-		post := new(models.Post)
+	if !relatedThr && !relatedUsr && !relatedFrm {
+		Post := new(models.Post)
 		row := db.DbQueryRow("SELECT author,created,forum,id,isedited,message,parent,thread FROM posts WHERE id=$1;", []interface{}{id})
 
-		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread)
+		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread)
 
-		postDetail.Post = post
+		postDetail.Post = Post
 
-	} else if !relUser && !relThread && relForum {
+	} else if !relatedUsr && !relatedThr && relatedFrm {
 
-		query := "SELECT p.author,p.created,p.forum,p.id,p.isedited,p.message,p.parent,p.thread, f.posts, f.slug, f.threads, f.title, f.author FROM posts p " +
-			"JOIN forums f ON p.id=$1 AND p.forum=f.slug"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, frm.posts, frm.slug, frm.threads, frm.title, frm.author FROM posts psts " +
+			"JOIN forums frm ON psts.id=$1 AND psts.forum=frm.slug"
 		row := db.DbQueryRow(query, []interface{}{id})
 
-		forum := new(models.Forum)
-		post := new(models.Post)
+		Forum := new(models.Forum)
+		Post := new(models.Post)
 
-		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
-			&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
+		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread,
+			&Forum.Posts, &Forum.Slug, &Forum.Threads, &Forum.Title, &Forum.User)
 
-		postDetail.Forum = forum
-		postDetail.Post = post
+		postDetail.Forum = Forum
+		postDetail.Post = Post
 
-	} else if !relUser && relThread && !relForum {
+	} else if !relatedUsr && relatedThr && !relatedFrm {
 
-		query := "SELECT p.author,p.created,p.forum,p.id,p.isedited,p.message,p.parent,p.thread, t.id, t.author, t.created, t.forum, t.message, t.slug, t.title, t.votes FROM posts p " +
-			"JOIN threads t ON p.id=$1 AND p.thread=t.id"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, thrs.id, thrs.author, thrs.created, thrs.forum, thrs.message, thrs.slug, thrs.title, thrs.votes FROM posts psts " +
+			"JOIN threads thrs ON psts.id=$1 AND psts.thread=thrs.id"
 		row := db.DbQueryRow(query, []interface{}{id})
 
-		thr := new(models.Thread)
-		post := new(models.Post)
+		Thread := new(models.Thread)
+		Post := new(models.Post)
 
-		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
-			&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &sqlSlug, &thr.Title, &thr.Votes)
+		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread,
+			&Thread.Id, &Thread.Author, &Thread.Created, &Thread.Forum, &Thread.Message, &sqlSlug, &Thread.Title, &Thread.Votes)
 
 		if !sqlSlug.Valid {
-			thr.Slug = ""
+			Thread.Slug = ""
 		} else {
-			thr.Slug = sqlSlug.String
+			Thread.Slug = sqlSlug.String
 		}
 
-		postDetail.Thread = thr
-		postDetail.Post = post
+		postDetail.Thread = Thread
+		postDetail.Post = Post
 
-	} else if !relUser && relThread && relForum {
+	} else if !relatedUsr && relatedThr && relatedFrm {
 
-		query := "SELECT p.author,p.created,p.forum,p.id,p.isedited,p.message,p.parent,p.thread, t.id, t.author, t.created, t.forum, t.message, t.slug, t.title, t.votes,  f.posts, f.slug, f.threads, f.title, f.author  FROM posts p " +
-			"JOIN threads t ON p.id=$1 AND p.thread=t.id JOIN forums f ON p.forum=f.slug"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, thrs.id, thrs.author, thrs.created, thrs.forum, thrs.message, thrs.slug, thrs.title, thrs.votes,  frm.posts, frm.slug, frm.threads, frm.title, frm.author  FROM posts psts " +
+			"JOIN threads thrs ON psts.id=$1 AND psts.thread=thrs.id JOIN forums frm ON psts.forum=frm.slug"
 		row := db.DbQueryRow(query, []interface{}{id})
 
-		thr := new(models.Thread)
-		forum := new(models.Forum)
-		post := new(models.Post)
+		Thread := new(models.Thread)
+		Forum := new(models.Forum)
+		Post := new(models.Post)
 
-		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
-			&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &sqlSlug, &thr.Title, &thr.Votes,
-			&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
+		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread,
+			&Thread.Id, &Thread.Author, &Thread.Created, &Thread.Forum, &Thread.Message, &sqlSlug, &Thread.Title, &Thread.Votes,
+			&Forum.Posts, &Forum.Slug, &Forum.Threads, &Forum.Title, &Forum.User)
 
 		if !sqlSlug.Valid {
-			thr.Slug = ""
+			Thread.Slug = ""
 		} else {
-			thr.Slug = sqlSlug.String
+			Thread.Slug = sqlSlug.String
 		}
 
-		postDetail.Thread = thr
-		postDetail.Post = post
-		postDetail.Forum = forum
+		postDetail.Thread = Thread
+		postDetail.Post = Post
+		postDetail.Forum = Forum
 
-	} else if relUser && !relThread && !relForum {
+	} else if relatedUsr && !relatedThr && !relatedFrm {
 
-		query := "SELECT p.author,p.created,p.forum,p.id,p.isedited,p.message,p.parent,p.thread, u.about, u.email, u.fullname, u.nickname FROM posts p " +
-			"JOIN users u ON p.id=$1 AND u.nickname=p.author"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, usrs.about, usrs.email, usrs.fullname, usrs.nickname FROM posts psts " +
+			"JOIN users usrs ON psts.id=$1 AND usrs.nickname=psts.author"
 		row := db.DbQueryRow(query, []interface{}{id})
 
-		user := new(models.User)
-		post := new(models.Post)
+		User := new(models.User)
+		Post := new(models.Post)
 
-		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
-			&user.About, &user.Email, &user.FullName, &user.NickName)
+		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread,
+			&User.About, &User.Email, &User.FullName, &User.NickName)
 
-		postDetail.Author = user
-		postDetail.Post = post
+		postDetail.Author = User
+		postDetail.Post = Post
 
-	} else if relUser && !relThread && relForum {
+	} else if relatedUsr && !relatedThr && relatedFrm {
 
-		query := "SELECT p.author,p.created,p.forum,p.id,p.isedited,p.message,p.parent,p.thread, u.about, u.email, u.fullname, u.nickname, f.posts, f.slug, f.threads, f.title, f.author   FROM posts p " +
-			"JOIN users u ON p.id=$1 AND u.nickname=p.author " +
-			"JOIN forums f ON p.forum=f.slug"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, usrs.about, usrs.email, usrs.fullname, usrs.nickname, frm.posts, frm.slug, frm.threads, frm.title, frm.author   FROM posts psts " +
+			"JOIN users usrs ON psts.id=$1 AND usrs.nickname=psts.author " +
+			"JOIN forums frm ON psts.forum=frm.slug"
 		row := db.DbQueryRow(query, []interface{}{id})
 
-		user := new(models.User)
-		post := new(models.Post)
-		forum := new(models.Forum)
+		User := new(models.User)
+		Post := new(models.Post)
+		Forum := new(models.Forum)
 
-		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
-			&user.About, &user.Email, &user.FullName, &user.NickName,
-			&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
+		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread,
+			&User.About, &User.Email, &User.FullName, &User.NickName,
+			&Forum.Posts, &Forum.Slug, &Forum.Threads, &Forum.Title, &Forum.User)
 
-		postDetail.Author = user
-		postDetail.Post = post
-		postDetail.Forum = forum
+		postDetail.Author = User
+		postDetail.Post = Post
+		postDetail.Forum = Forum
 
-	} else if relUser && relThread && !relForum {
+	} else if relatedUsr && relatedThr && !relatedFrm {
 
-		query := "SELECT p.author,p.created,p.forum,p.id,p.isedited,p.message,p.parent,p.thread, u.about, u.email, u.fullname, u.nickname,  t.id, t.author, t.created, t.forum, t.message, t.slug, t.title, t.votes FROM posts p " +
-			"JOIN users u ON p.id=$1 AND u.nickname=p.author " +
-			"JOIN threads t ON p.thread=t.id"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, usrs.about, usrs.email, usrs.fullname, usrs.nickname,  thrs.id, thrs.author, thrs.created, thrs.forum, thrs.message, thrs.slug, thrs.title, thrs.votes FROM posts psts " +
+			"JOIN users usrs ON psts.id=$1 AND usrs.nickname=psts.author " +
+			"JOIN threads thrs ON psts.thread=thrs.id"
 		row := db.DbQueryRow(query, []interface{}{id})
 
-		user := new(models.User)
-		post := new(models.Post)
-		thr := new(models.Thread)
+		User := new(models.User)
+		Post := new(models.Post)
+		Thread := new(models.Thread)
 
-		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
-			&user.About, &user.Email, &user.FullName, &user.NickName,
-			&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &sqlSlug, &thr.Title, &thr.Votes)
+		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread,
+			&User.About, &User.Email, &User.FullName, &User.NickName,
+			&Thread.Id, &Thread.Author, &Thread.Created, &Thread.Forum, &Thread.Message, &sqlSlug, &Thread.Title, &Thread.Votes)
 
 		if !sqlSlug.Valid {
-			thr.Slug = ""
+			Thread.Slug = ""
 		} else {
-			thr.Slug = sqlSlug.String
+			Thread.Slug = sqlSlug.String
 		}
 
-		postDetail.Author = user
-		postDetail.Post = post
-		postDetail.Thread = thr
+		postDetail.Author = User
+		postDetail.Post = Post
+		postDetail.Thread = Thread
 
-	} else if relUser && relThread && relForum {
+	} else if relatedUsr && relatedThr && relatedFrm {
 
-		query := "SELECT p.author,p.created,p.forum,p.id,p.isedited,p.message,p.parent,p.thread, u.about, u.email, u.fullname, u.nickname,  t.id, t.author, t.created, t.forum, t.message, t.slug, t.title, t.votes , f.posts, f.slug, f.threads, f.title, f.author FROM posts p " +
-			"JOIN users u ON p.id=$1 AND u.nickname=p.author " +
-			"JOIN threads t ON p.thread=t.id " +
-			"JOIN forums f ON p.forum=f.slug"
+		query := "SELECT psts.author,psts.created,psts.forum,psts.id,psts.isedited,psts.message,psts.parent,psts.thread, usrs.about, usrs.email, usrs.fullname, usrs.nickname,  thrs.id, thrs.author, thrs.created, thrs.forum, thrs.message, thrs.slug, thrs.title, thrs.votes , frm.posts, frm.slug, frm.threads, frm.title, frm.author FROM posts psts " +
+			"JOIN users usrs ON psts.id=$1 AND usrs.nickname=psts.author " +
+			"JOIN threads thrs ON psts.thread=thrs.id " +
+			"JOIN forums frm ON psts.forum=frm.slug"
 		row := db.DbQueryRow(query, []interface{}{id})
 
-		user := new(models.User)
-		post := new(models.Post)
-		thr := new(models.Thread)
-		forum := new(models.Forum)
+		User := new(models.User)
+		Post := new(models.Post)
+		Thread := new(models.Thread)
+		Forum := new(models.Forum)
 
-		err = row.Scan(&post.Author, &post.Created, &post.Forum, &post.Id, &post.IsEdited, &post.Message, &post.Parent, &post.Thread,
-			&user.About, &user.Email, &user.FullName, &user.NickName,
-			&thr.Id, &thr.Author, &thr.Created, &thr.Forum, &thr.Message, &sqlSlug, &thr.Title, &thr.Votes,
-			&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
+		err = row.Scan(&Post.Author, &Post.Created, &Post.Forum, &Post.Id, &Post.IsEdited, &Post.Message, &Post.Parent, &Post.Thread,
+			&User.About, &User.Email, &User.FullName, &User.NickName,
+			&Thread.Id, &Thread.Author, &Thread.Created, &Thread.Forum, &Thread.Message, &sqlSlug, &Thread.Title, &Thread.Votes,
+			&Forum.Posts, &Forum.Slug, &Forum.Threads, &Forum.Title, &Forum.User)
 
 		if !sqlSlug.Valid {
-			thr.Slug = ""
+			Thread.Slug = ""
 		} else {
-			thr.Slug = sqlSlug.String
+			Thread.Slug = sqlSlug.String
 		}
 
-		postDetail.Author = user
-		postDetail.Post = post
-		postDetail.Thread = thr
-		postDetail.Forum = forum
+		postDetail.Author = User
+		postDetail.Post = Post
+		postDetail.Thread = Thread
+		postDetail.Forum = Forum
 
 	}
 
 	if err != nil {
 		fmt.Println(err.Error())
-		Errors.SendError("Can't find post with id "+id+"\n", 404, &w)
+		Errors.SendError("Can't find Post with id "+id, http.StatusNotFound, &w)
 		return
 	}
 

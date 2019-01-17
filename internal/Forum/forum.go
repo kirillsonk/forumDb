@@ -1,12 +1,12 @@
 package Forum
 
 import (
+	"database/sql"
+	"fmt"
 	"forum-database/db"
 	"forum-database/internal/Errors"
 	"forum-database/internal/User"
 	"forum-database/models"
-	"database/sql"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -14,310 +14,304 @@ import (
 	"github.com/lib/pq"
 )
 
-func ForumUsers(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("content-type", "application/json")
+func UsersForum(w http.ResponseWriter, r *http.Request) { //+
+	if r.Method == http.MethodGet {
+		w.Header().Set("content-type", "application/json")
 
-	if r.Method != http.MethodGet {
-		return
-	}
+		limitValue := r.URL.Query().Get("limit")
+		descValue := r.URL.Query().Get("desc")
+		sinceValue := r.URL.Query().Get("since")
 
-	limitVal := r.URL.Query().Get("limit")
-	sinceVal := r.URL.Query().Get("since")
-	descVal := r.URL.Query().Get("desc")
+		var lim = false
+		var dsc = false
+		var since = false
 
-	var limit = false
-	var since = false
-	var desc = false
+		if limitValue != "" {
+			lim = true
+		}
+		if sinceValue != "" {
+			since = true
+		}
+		if descValue == "true" {
+			dsc = true
+		}
 
-	if limitVal != "" {
-		limit = true
-	}
-	if sinceVal != "" {
-		since = true
-	}
-	if descVal == "true" {
-		desc = true
-	}
+		var err error
+		var rowsData *sql.Rows
 
-	var rows *sql.Rows
+		vars := mux.Vars(r)
+		slug := vars["slug"]
 
-	var err error
+		ForumBySlug, _ := forumBySlugOrID(slug, nil)
 
-	vars := mux.Vars(r)
-	slug := vars["slug"]
-
-	frm, _ := getForum(slug, nil)
-
-	if frm == nil {
-		Errors.SendError("Can't find forum with slug "+slug+"\n", 404, &w)
-		return
-	}
-
-	if !limit && !since && !desc {
-		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 ORDER BY nickname ASC"
-
-		rows, err = db.DbQuery(query, []interface{}{slug})
-	} else if !limit && !since && desc {
-		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 ORDER BY nickname DESC "
-
-		rows, err = db.DbQuery(query, []interface{}{slug})
-	} else if !limit && since && !desc {
-		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 AND u.nickname>$2 ORDER BY nickname ASC"
-
-		rows, err = db.DbQuery(query, []interface{}{slug, sinceVal})
-
-	} else if !limit && since && desc {
-		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 AND u.nickname<$2 ORDER BY nickname DESC "
-		rows, err = db.DbQuery(query, []interface{}{slug, sinceVal})
-
-	} else if limit && !since && !desc {
-		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 ORDER BY nickname ASC LIMIT $2"
-		rows, err = db.DbQuery(query, []interface{}{slug, limitVal})
-
-	} else if limit && !since && desc {
-		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 ORDER BY nickname DESC LIMIT $2"
-		rows, err = db.DbQuery(query, []interface{}{slug, limitVal})
-
-	} else if limit && since && !desc {
-		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 AND u.nickname>$2 ORDER BY nickname ASC LIMIT $3"
-
-		rows, err = db.DbQuery(query, []interface{}{slug, sinceVal, limitVal})
-
-	} else if limit && since && desc {
-		query := "SELECT about,email,fullname,nickname FROM forum_users f_u JOIN users u ON f_u.author=u.nickname AND f_u.forum=$1 AND u.nickname<$2 ORDER BY nickname DESC LIMIT $3"
-
-		rows, err = db.DbQuery(query, []interface{}{slug, sinceVal, limitVal})
-
-	}
-
-	if err != nil {
-		Errors.SendError("Can't find forum with slug "+slug+"\n", http.StatusInternalServerError, &w)
-		return
-	}
-
-	usrList := models.UserList{}
-
-	for rows.Next() {
-		user := models.User{}
-
-		err := rows.Scan(&user.About, &user.Email, &user.FullName, &user.NickName)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+		if ForumBySlug == nil {
+			Errors.SendError("Can't find forum with slug "+slug, http.StatusNotFound, &w)
 			return
 		}
 
-		usrList = append(usrList, user)
+		if !lim && !since && !dsc {
+			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 ORDER BY nickname ASC"
+
+			rowsData, err = db.DbQuery(data, []interface{}{slug})
+		} else if !lim && !since && dsc {
+			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 ORDER BY nickname DESC "
+
+			rowsData, err = db.DbQuery(data, []interface{}{slug})
+		} else if !lim && since && !dsc {
+			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 AND usr.nickname>$2 ORDER BY nickname ASC"
+
+			rowsData, err = db.DbQuery(data, []interface{}{slug, sinceValue})
+
+		} else if !lim && since && dsc {
+			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 AND usr.nickname<$2 ORDER BY nickname DESC "
+			rowsData, err = db.DbQuery(data, []interface{}{slug, sinceValue})
+
+		} else if lim && !since && !dsc {
+			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 ORDER BY nickname ASC LIMIT $2"
+			rowsData, err = db.DbQuery(data, []interface{}{slug, limitValue})
+
+		} else if lim && !since && dsc {
+			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 ORDER BY nickname DESC LIMIT $2"
+			rowsData, err = db.DbQuery(data, []interface{}{slug, limitValue})
+
+		} else if lim && since && !dsc {
+			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 AND usr.nickname>$2 ORDER BY nickname ASC LIMIT $3"
+
+			rowsData, err = db.DbQuery(data, []interface{}{slug, sinceValue, limitValue})
+
+		} else if lim && since && dsc {
+			data := "SELECT about,email,fullname,nickname FROM forum_users frm_usr JOIN users usr ON frm_usr.author=usr.nickname AND frm_usr.forum=$1 AND usr.nickname<$2 ORDER BY nickname DESC LIMIT $3"
+
+			rowsData, err = db.DbQuery(data, []interface{}{slug, sinceValue, limitValue})
+
+		}
+
+		if err != nil {
+			Errors.SendError("Can't find forum with slug "+slug, http.StatusInternalServerError, &w)
+			return
+		}
+
+		usrList := models.UserList{}
+
+		for rowsData.Next() {
+			user := models.User{}
+			err := rowsData.Scan(&user.About, &user.Email, &user.FullName, &user.NickName)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			usrList = append(usrList, user)
+		}
+
+		defer rowsData.Close()
+
+		resData, _ := usrList.MarshalJSON() //правильно easyjson
+		w.Write(resData)
+		return
 	}
-
-	defer rows.Close()
-
-	resData, _ := usrList.MarshalJSON() //не уверен, что правильно. См. models User
-	w.Write(resData)
 	return
 }
 
-func ForumThreads(w http.ResponseWriter, r *http.Request) {
+func ThreadsForum(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("content-type", "application/json")
+	if r.Method == http.MethodGet {
+		w.Header().Set("content-type", "application/json")
 
-	if r.Method != http.MethodGet {
-		return
-	}
+		limitValue := r.URL.Query().Get("limit")
+		sinceValue := r.URL.Query().Get("since")
+		descValue := r.URL.Query().Get("desc")
 
-	limitVal := r.URL.Query().Get("limit")
-	sinceVal := r.URL.Query().Get("since")
-	descVal := r.URL.Query().Get("desc")
+		var lim = false
+		var since = false
+		var dsc = false
 
-	var limit = false
-	var since = false
-	var desc = false
+		if limitValue != "" {
+			lim = true
+		}
+		if sinceValue != "" {
+			since = true
+		}
+		if descValue == "true" {
+			dsc = true
+		}
 
-	if limitVal != "" {
-		limit = true
-	}
-	if sinceVal != "" {
-		since = true
-	}
-	if descVal == "true" {
-		desc = true
-	}
+		vars := mux.Vars(r)
+		slug := vars["slug"]
 
-	vars := mux.Vars(r)
-	slug := vars["slug"]
+		var rowsData *sql.Rows
 
-	var rows *sql.Rows
+		var err error
 
-	var err error
-
-	if limit && !since && !desc {
-		rows, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 ORDER BY created LIMIT $2;", []interface{}{slug, limitVal})
-	} else if since && !limit && !desc {
-		rows, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created <= $2 ORDER BY created;", []interface{}{slug, sinceVal})
-	} else if limit && since && !desc {
-		rows, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created >= $2 ORDER BY created LIMIT $3;", []interface{}{slug, sinceVal, limitVal})
-	} else if limit && !since && desc {
-		rows, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 ORDER BY created DESC LIMIT $2;", []interface{}{slug, limitVal})
-	} else if since && !limit && desc {
-		rows, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created <= $2 ORDER BY created DESC;", []interface{}{slug, sinceVal})
-	} else if limit && since && desc {
-		rows, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created <= $2 ORDER BY created DESC LIMIT $3;", []interface{}{slug, sinceVal, limitVal})
-	} else if limit && since && !desc {
-		rows, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created >= $2 ORDER BY created LIMIT $3;", []interface{}{slug, sinceVal, limitVal})
-	} else if !limit && !since && !desc {
-		rows, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 ORDER BY created;", []interface{}{slug})
-	} else {
-		rows, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 ORDER BY created;", []interface{}{slug})
-	}
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	threadList := models.ThreadList{}
-
-	var nullSlug sql.NullString
-
-	var flag = false
-
-	for rows.Next() {
-		flag = true
-		thread := models.Thread{}
-		err := rows.Scan(&thread.Id,
-			&thread.Author,
-			&thread.Created,
-			&thread.Forum,
-			&thread.Message,
-			&nullSlug,
-			&thread.Title,
-			&thread.Votes)
-
-		if nullSlug.Valid {
-			thread.Slug = nullSlug.String
+		if lim && !since && !dsc {
+			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 ORDER BY created LIMIT $2;", []interface{}{slug, limitValue})
+		} else if since && !lim && !dsc {
+			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created <= $2 ORDER BY created;", []interface{}{slug, sinceValue})
+		} else if lim && since && !dsc {
+			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created >= $2 ORDER BY created LIMIT $3;", []interface{}{slug, sinceValue, limitValue})
+		} else if lim && !since && dsc {
+			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 ORDER BY created DESC LIMIT $2;", []interface{}{slug, limitValue})
+		} else if since && !lim && dsc {
+			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created <= $2 ORDER BY created DESC;", []interface{}{slug, sinceValue})
+		} else if lim && since && dsc {
+			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created <= $2 ORDER BY created DESC LIMIT $3;", []interface{}{slug, sinceValue, limitValue})
+		} else if lim && since && !dsc {
+			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 AND created >= $2 ORDER BY created LIMIT $3;", []interface{}{slug, sinceValue, limitValue})
+		} else if !lim && !since && !dsc {
+			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 ORDER BY created;", []interface{}{slug})
 		} else {
-			thread.Slug = ""
+			rowsData, err = db.DbQuery("SELECT * FROM threads WHERE forum = $1 ORDER BY created;", []interface{}{slug})
 		}
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		threadList := models.ThreadList{}
+		var nullSlug sql.NullString
+		var flag = false
 
-		threadList = append(threadList, thread) //easy
-	}
+		for rowsData.Next() {
+			flag = true
+			thread := models.Thread{}
+			err := rowsData.Scan(&thread.Id,
+				&thread.Author,
+				&thread.Created,
+				&thread.Forum,
+				&thread.Message,
+				&nullSlug,
+				&thread.Title,
+				&thread.Votes)
 
-	if flag == false {
-		frm, _ := getForum(slug, nil)
-		if frm == nil {
-			Errors.SendError("Can't find forum with slug "+slug+"\n", 404, &w)
-			return
+			if nullSlug.Valid {
+				thread.Slug = nullSlug.String
+			} else {
+				thread.Slug = ""
+			}
+
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			threadList = append(threadList, thread) //easyjson
 		}
+
+		if flag == false {
+			ForumBySlug, _ := forumBySlugOrID(slug, nil)
+			if ForumBySlug == nil {
+				Errors.SendError("Can't find forum with slug "+slug, http.StatusNotFound, &w)
+				return
+			}
+		}
+
+		defer rowsData.Close()
+
+		resData, _ := threadList.MarshalJSON()
+		w.Write(resData)
+		return
 	}
-
-	defer rows.Close()
-
-	resData, _ := threadList.MarshalJSON()
-	w.Write(resData)
 	return
+
 }
 
-func getForum(slugOrId string, t *sql.Tx) (*models.Forum, error) {
-	forum := models.Forum{}
+func forumBySlugOrID(slugOrId string, t *sql.Tx) (*models.Forum, error) {
+	Forum := models.Forum{}
 
 	var err error
-	err = db.DbQueryRow("SELECT * FROM forums WHERE slug=$1", []interface{}{slugOrId}).Scan(&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
+	err = db.DbQueryRow("SELECT * FROM forums WHERE slug=$1", []interface{}{slugOrId}).Scan(&Forum.Posts, &Forum.Slug, &Forum.Threads, &Forum.Title, &Forum.User)
 
 	if err != nil {
 		return nil, err
 	}
-	return &forum, nil
+	return &Forum, nil
 }
 
 func ForumDetails(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")
 	vars := mux.Vars(r)
 	slug := vars["slug"]
-	forum, err := getForum(slug, nil)
+	Forum, err := forumBySlugOrID(slug, nil)
 
 	if err != nil {
-		Errors.SendError("Can't find forum with slug "+slug+"\n", http.StatusNotFound, &w)
+		Errors.SendError("Can't find forum with slug "+slug, http.StatusNotFound, &w)
 		return
 	}
 
-	resData, _ := forum.MarshalJSON()
+	resData, _ := Forum.MarshalJSON()
 	w.Write(resData)
 	return
 }
 
-func ForumCreate(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("content-type", "application/json")
-	if r.Method == http.MethodGet {
-		return
-	}
+func CreateForum(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		w.Header().Set("content-type", "application/json")
 
-	body, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
+		body, err := ioutil.ReadAll(r.Body)
+		defer r.Body.Close()
 
-	dbConn := db.GetLink()
+		dbConn := db.GetLink()
 
-	t, err := dbConn.Begin()
+		t, err := dbConn.Begin()
 
-	if err != nil {
-		fmt.Println("db.begin ", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	defer t.Rollback()
-
-	_, err = t.Exec("SET LOCAL synchronous_commit TO OFF")
-
-	if err != nil {
-		fmt.Println("set local ", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	forum := new(models.Forum)
-	err = forum.UnmarshalJSON(body)
-
-	existUser, _ := User.GetUser(forum.User)
-
-	if existUser == nil {
-		Errors.SendError("Can't find user with name "+forum.User+"\n", http.StatusNotFound, &w)
-		return
-	}
-
-	row := t.QueryRow("INSERT INTO forums(slug, title, author) VALUES ($1, $2, $3) RETURNING *", []interface{}{forum.Slug, forum.Title, existUser.NickName}...)
-
-	err = row.Scan(&forum.Posts, &forum.Slug, &forum.Threads, &forum.Title, &forum.User)
-
-	if err != nil {
-		errorName := err.(*pq.Error).Code.Name()
-		if errorName == "foreign_key_violation" {
-			Errors.SendError("Can't find user with name "+forum.User+"\n", http.StatusNotFound, &w)
+		if err != nil {
+			fmt.Println("db.begin ", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		if errorName == "unique_violation" {
-			row := db.DbQueryRow("SELECT * FROM forums WHERE slug=$1", []interface{}{forum.Slug})
-			fr := models.Forum{}
-			err := row.Scan(&fr.Posts, &fr.Slug, &fr.Threads, &fr.Title, &fr.User)
 
-			if err != nil {
-				fmt.Println(err.Error())
-				w.WriteHeader(http.StatusInternalServerError)
+		defer t.Rollback()
+
+		_, err = t.Exec("SET LOCAL synchronous_commit TO OFF")
+
+		if err != nil {
+			fmt.Println("set local ", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		Forum := new(models.Forum)
+		err = Forum.UnmarshalJSON(body)
+
+		existUser, _ := User.GetUser(Forum.User)
+
+		if existUser == nil {
+			Errors.SendError("Can't find user with name "+Forum.User, http.StatusNotFound, &w)
+			return
+		}
+
+		row := t.QueryRow("INSERT INTO forums(slug, title, author) VALUES ($1, $2, $3) RETURNING *", []interface{}{Forum.Slug, Forum.Title, existUser.NickName}...)
+
+		err = row.Scan(&Forum.Posts, &Forum.Slug, &Forum.Threads, &Forum.Title, &Forum.User)
+
+		if err != nil {
+			errorName := err.(*pq.Error).Code.Name()
+			if errorName == "foreign_key_violation" {
+				Errors.SendError("Can't find user with name "+Forum.User, http.StatusNotFound, &w)
 				return
 			}
-			w.WriteHeader(http.StatusConflict)
-			resData, _ := fr.MarshalJSON()
-			w.Write(resData)
-			return
+			if errorName == "unique_violation" {
+				row := db.DbQueryRow("SELECT * FROM forums WHERE slug=$1", []interface{}{Forum.Slug})
+				fr := models.Forum{}
+				err := row.Scan(&fr.Posts, &fr.Slug, &fr.Threads, &fr.Title, &fr.User)
+
+				if err != nil {
+					fmt.Println(err.Error())
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				w.WriteHeader(http.StatusConflict)
+				resData, _ := fr.MarshalJSON()
+				w.Write(resData)
+				return
+			}
 		}
+
+		t.Commit()
+
+		resData, _ := Forum.MarshalJSON()
+		w.WriteHeader(http.StatusCreated)
+		w.Write(resData)
+		return
 	}
-
-	t.Commit()
-
-	resData, _ := forum.MarshalJSON()
-	w.WriteHeader(http.StatusCreated)
-	w.Write(resData)
 	return
 }

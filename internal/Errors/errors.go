@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func SendError(errText string, statusCode int, w *http.ResponseWriter) ([]byte, error){
+func SendError(errText string, statusCode int, w *http.ResponseWriter) ([]byte, error) {
 	e := new(models.Error)
 	e.Message = errText
 	resData, _ := e.MarshalJSON()
