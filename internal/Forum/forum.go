@@ -9,9 +9,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/kirillsonk/forumDb/Errors"
-	"github.com/kirillsonk/forumDb/User"
 	"github.com/kirillsonk/forumDb/db"
+	"github.com/kirillsonk/forumDb/internal/Errors"
+	"github.com/kirillsonk/forumDb/internal/User"
 	"github.com/kirillsonk/forumDb/models"
 
 	"github.com/gorilla/mux"

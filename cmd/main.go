@@ -11,13 +11,13 @@ import (
 
 	"net/http"
 
-	"github.com/kirillsonk/forumDb/CommonService"
-	"github.com/kirillsonk/forumDb/Forum"
-	"github.com/kirillsonk/forumDb/Post"
-	"github.com/kirillsonk/forumDb/Thread"
-	"github.com/kirillsonk/forumDb/User"
-	"github.com/kirillsonk/forumDb/Vote"
 	"github.com/kirillsonk/forumDb/db"
+	"github.com/kirillsonk/forumDb/internal/CommonService"
+	"github.com/kirillsonk/forumDb/internal/Forum"
+	"github.com/kirillsonk/forumDb/internal/Post"
+	"github.com/kirillsonk/forumDb/internal/Thread"
+	"github.com/kirillsonk/forumDb/internal/User"
+	"github.com/kirillsonk/forumDb/internal/Vote"
 
 	"github.com/gorilla/mux"
 )
