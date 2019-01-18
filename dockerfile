@@ -30,8 +30,8 @@ ENV PATH $GOROOT/bin:$GOPATH/bin:/usr/local/go/bin:$PATH
 
 
 # Копируем исходный код в Docker-контейнер
-WORKDIR $GOPATH/src/bitbucket.org/kirillsonk/forumDb/
-ADD ./ $GOPATH/src/bitbucket.org/kirillsonk/forumDb/
+WORKDIR $GOPATH/src/github.com/kirillsonk/forumDb/
+ADD ./ $GOPATH/src/github.com/kirillsonk/forumDb/
 
 # Подтягиваем зависимости
 RUN go get \

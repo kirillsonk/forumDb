@@ -8,9 +8,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"bitbucket.org/kirillsonk/forumDb/Errors"
-	"bitbucket.org/kirillsonk/forumDb/db"
-	"bitbucket.org/kirillsonk/forumDb/models"
+	"github.com/kirillsonk/forumDb/Errors"
+	"github.com/kirillsonk/forumDb/db"
+	"github.com/kirillsonk/forumDb/models"
 
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"

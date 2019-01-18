@@ -5,8 +5,8 @@ import (
 	// "forumDb/models"
 	"net/http"
 
-	"bitbucket.org/kirillsonk/forumDb/db"
-	"bitbucket.org/kirillsonk/forumDb/models"
+	"github.com/kirillsonk/forumDb/db"
+	"github.com/kirillsonk/forumDb/models"
 )
 
 func ServiceStatus(w http.ResponseWriter, r *http.Request) { //правил if для метода GET

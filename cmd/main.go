@@ -11,13 +11,13 @@ import (
 
 	"net/http"
 
-	"bitbucket.org/kirillsonk/forumDb/CommonService"
-	"bitbucket.org/kirillsonk/forumDb/Forum"
-	"bitbucket.org/kirillsonk/forumDb/Post"
-	"bitbucket.org/kirillsonk/forumDb/Thread"
-	"bitbucket.org/kirillsonk/forumDb/User"
-	"bitbucket.org/kirillsonk/forumDb/Vote"
-	"bitbucket.org/kirillsonk/forumDb/db"
+	"github.com/kirillsonk/forumDb/CommonService"
+	"github.com/kirillsonk/forumDb/Forum"
+	"github.com/kirillsonk/forumDb/Post"
+	"github.com/kirillsonk/forumDb/Thread"
+	"github.com/kirillsonk/forumDb/User"
+	"github.com/kirillsonk/forumDb/Vote"
+	"github.com/kirillsonk/forumDb/db"
 
 	"github.com/gorilla/mux"
 )

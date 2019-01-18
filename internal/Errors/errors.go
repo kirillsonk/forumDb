@@ -4,7 +4,7 @@ import (
 	// "forumDb/models"
 	"net/http"
 
-	"bitbucket.org/kirillsonk/forumDb/models"
+	"github.com/kirillsonk/forumDb/models"
 )
 
 func SendError(errText string, statusCode int, w *http.ResponseWriter) ([]byte, error) {
