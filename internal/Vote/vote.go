@@ -10,7 +10,7 @@ import (
 	"strconv"
 
 	"github.com/kirillsonk/forumDb/db"
-	"github.com/kirillsonk/forumDb/internal/Errors"
+	"github.com/kirillsonk/forumDb/internal/Error"
 	"github.com/kirillsonk/forumDb/internal/Thread"
 	"github.com/kirillsonk/forumDb/models"
 
