@@ -9,7 +9,7 @@ USER postgres
 
 RUN /etc/init.d/postgresql start &&\
     psql --command "CREATE USER docker WITH SUPERUSER PASSWORD 'docker';" &&\
-    createdb -O docker forum &&\
+    createdb -O docker docker &&\
     /etc/init.d/postgresql stop
 
 USER postgres
@@ -21,10 +21,9 @@ RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf
 # RUN echo "autovacuum = off" >> /etc/postgresql/$PGVER/main/postgresql.conf
 # RUN echo "max_connections = 100" >> /etc/postgresql/$PGVER/main/postgresql.conf
 
-VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
+# VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 
-
-EXPOSE 5432
+# EXPOSE 5432
 EXPOSE 5000
 
 USER root
@@ -40,6 +39,7 @@ USER root
 
 RUN go get github.com/gorilla/mux
 RUN go get github.com/lib/pq
+RUN go get github.com/mailru/easyjson
 
 WORKDIR $GOPATH/src/github.com/kirillsonk/forumDb
 ADD . $GOPATH/src/github.com/kirillsonk/forumDb
