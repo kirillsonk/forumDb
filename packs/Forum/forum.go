@@ -3,16 +3,16 @@ package Forum
 import (
 	"database/sql"
 	// "forumDb/db"
-	// "forumDb/internal/Errors"
-	// "forumDb/internal/User"
 	// "forumDb/models"
+	// "forumDb/packs/Errors"
+	// "forumDb/packs/User"
 	"io/ioutil"
 	"net/http"
 
 	"github.com/kirillsonk/forumDb/db"
-	"github.com/kirillsonk/forumDb/internal/Errors"
-	"github.com/kirillsonk/forumDb/internal/User"
 	"github.com/kirillsonk/forumDb/models"
+	"github.com/kirillsonk/forumDb/packs/Errors"
+	"github.com/kirillsonk/forumDb/packs/User"
 
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"

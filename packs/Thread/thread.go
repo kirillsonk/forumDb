@@ -3,15 +3,15 @@ package Thread
 import (
 	"database/sql"
 	// "forumDb/db"
-	// "forumDb/internal/Errors"
 	// "forumDb/models"
+	// "forumDb/packs/Errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 
 	"github.com/kirillsonk/forumDb/db"
-	"github.com/kirillsonk/forumDb/internal/Errors"
 	"github.com/kirillsonk/forumDb/models"
+	"github.com/kirillsonk/forumDb/packs/Errors"
 
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"

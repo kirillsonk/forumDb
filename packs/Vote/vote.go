@@ -2,17 +2,18 @@ package Vote
 
 import (
 	// "forumDb/db"
-	// "forumDb/internal/Errors"
-	// "forumDb/internal/Thread"
 	// "forumDb/models"
+	// "forumDb/packs/Errors"
+	// "forumDb/packs/Thread"
+
+	"github.com/kirillsonk/forumDb/db"
+	"github.com/kirillsonk/forumDb/models"
+	"github.com/kirillsonk/forumDb/packs/Errors"
+	"github.com/kirillsonk/forumDb/packs/Thread"
+
 	"io/ioutil"
 	"net/http"
 	"strconv"
-
-	"github.com/kirillsonk/forumDb/db"
-	"github.com/kirillsonk/forumDb/internal/Error"
-	"github.com/kirillsonk/forumDb/internal/Thread"
-	"github.com/kirillsonk/forumDb/models"
 
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"

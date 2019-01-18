@@ -2,22 +2,22 @@ package main
 
 import (
 	// "forumDb/db"
-	// "forumDb/internal/CommonService"
-	// "forumDb/internal/Forum"
-	// "forumDb/internal/Post"
-	// "forumDb/internal/Thread"
-	// "forumDb/internal/User"
-	// "forumDb/internal/Vote"
+	// "forumDb/packs/CommonService"
+	// "forumDb/packs/Forum"
+	// "forumDb/packs/Post"
+	// "forumDb/packs/Thread"
+	// "forumDb/packs/User"
+	// "forumDb/packs/Vote"
 
 	"net/http"
 
 	"github.com/kirillsonk/forumDb/db"
-	"github.com/kirillsonk/forumDb/internal/CommonService"
-	"github.com/kirillsonk/forumDb/internal/Forum"
-	"github.com/kirillsonk/forumDb/internal/Post"
-	"github.com/kirillsonk/forumDb/internal/Thread"
-	"github.com/kirillsonk/forumDb/internal/User"
-	"github.com/kirillsonk/forumDb/internal/Vote"
+	"github.com/kirillsonk/forumDb/packs/CommonService"
+	"github.com/kirillsonk/forumDb/packs/Forum"
+	"github.com/kirillsonk/forumDb/packs/Post"
+	"github.com/kirillsonk/forumDb/packs/Thread"
+	"github.com/kirillsonk/forumDb/packs/User"
+	"github.com/kirillsonk/forumDb/packs/Vote"
 
 	"github.com/gorilla/mux"
 )

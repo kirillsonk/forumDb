@@ -1,7 +1,5 @@
 FROM ubuntu:18.04
 
-# MAINTAINER Igor Dyrov # Deprecated now... why?
-
 RUN apt-get -y update
 ENV PGVER 10
 RUN apt-get install -y postgresql-$PGVER
@@ -48,4 +46,4 @@ ADD . $GOPATH/src/github.com/kirillsonk/forumDb
 
 USER postgres
 
-CMD service postgresql start && psql -f ./db/tables.sql forum && go run cmd/main.go
+CMD service postgresql start && go run cmd/main.go
