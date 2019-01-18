@@ -50,8 +50,8 @@ EXECUTE PROCEDURE create_thread();
 
 CREATE INDEX IF NOT EXISTS thrSlug ON Thread(slug);
 CREATE INDEX IF NOT EXISTS thrId ON Thread(id);
-CREATE INDEX IF NOT EXISTS thrForm_athr ON Thread (forum,author);
-CREATE INDEX IF NOT EXISTS thrForum_cr ON Thread (forum,created);
+CREATE INDEX IF NOT EXISTS thrForm_athr ON Thread(forum,author);
+CREATE INDEX IF NOT EXISTS thrForum_cr ON Thread(forum,created);
 
 --Posts
 CREATE TABLE IF NOT EXISTS Post(
@@ -103,7 +103,7 @@ CREATE INDEX IF NOT EXISTS postId_array ON Post (thread, (id_array[0]), id_array
 
 --Votes
 CREATE TABLE IF NOT EXISTS Vote (
-	nickname CITEXT COLLATE "ucs_basic" NOT NULL REFERENCES Users (nickname),
+	nickname CITEXT COLLATE "ucs_basic" NOT NULL REFERENCES Users(nickname),
 	voice INTEGER NOT NULL,
 	thread INTEGER NOT NULL REFERENCES Thread(id),
 	UNIQUE (nickname, thread)
