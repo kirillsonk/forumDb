@@ -1,18 +1,18 @@
 package Vote
 
 import (
-	// "forum-database/db"
-	// "forum-database/internal/Errors"
-	// "forum-database/internal/Thread"
-	// "forum-database/models"
+	// "forumDb/db"
+	// "forumDb/internal/Errors"
+	// "forumDb/internal/Thread"
+	// "forumDb/models"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 
-	"bitbucket.org/kirillsonk/forum-database/Errors"
-	"bitbucket.org/kirillsonk/forum-database/Thread"
-	"bitbucket.org/kirillsonk/forum-database/db"
-	"bitbucket.org/kirillsonk/forum-database/models"
+	"bitbucket.org/kirillsonk/forumDb/Errors"
+	"bitbucket.org/kirillsonk/forumDb/Thread"
+	"bitbucket.org/kirillsonk/forumDb/db"
+	"bitbucket.org/kirillsonk/forumDb/models"
 
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"

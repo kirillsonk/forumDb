@@ -30,8 +30,8 @@ ENV PATH $GOROOT/bin:$GOPATH/bin:/usr/local/go/bin:$PATH
 
 
 # Копируем исходный код в Docker-контейнер
-WORKDIR $GOPATH/src/bitbucket.org/kirillsonk/forum-database/
-ADD ./ $GOPATH/src/bitbucket.org/kirillsonk/forum-database/
+WORKDIR $GOPATH/src/bitbucket.org/kirillsonk/forumDb/
+ADD ./ $GOPATH/src/bitbucket.org/kirillsonk/forumDb/
 
 # Подтягиваем зависимости
 RUN go get \
@@ -59,4 +59,4 @@ EXPOSE 5000
 
 
 CMD service postgresql start &&\
-forum-database
+forumDb

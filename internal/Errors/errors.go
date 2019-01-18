@@ -1,10 +1,10 @@
 package Errors
 
 import (
-	// "forum-database/models"
+	// "forumDb/models"
 	"net/http"
 
-	"bitbucket.org/kirillsonk/forum-database/models"
+	"bitbucket.org/kirillsonk/forumDb/models"
 )
 
 func SendError(errText string, statusCode int, w *http.ResponseWriter) ([]byte, error) {
