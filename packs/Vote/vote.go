@@ -83,7 +83,7 @@ func VoteThread(w http.ResponseWriter, r *http.Request) {
 		thread, err := Thread.GetThreadByIdOrSlug(slugOrId)
 
 		if err != nil {
-			Errors.SendError("Can't find thread with id "+slugOrId+"\n", 404, &w)
+			Errors.SendError("Can't find thread with id "+slugOrId, http.StatusNotFound, &w)
 			return
 		}
 
