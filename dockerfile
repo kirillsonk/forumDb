@@ -12,7 +12,7 @@ USER postgres
 RUN /etc/init.d/postgresql start &&\
     psql --command "CREATE USER docker WITH SUPERUSER PASSWORD 'docker';" &&\
     createdb -O docker docker &&\
-    psql docker -f /db/tables.sql &&\
+    psql docker -f ./db/tables.sql &&\
     /etc/init.d/postgresql stop
 
 USER postgres
