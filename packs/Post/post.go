@@ -32,10 +32,12 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 
 		body, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
+		dbConnection := db.GetLinkSql()
+		dbc, err := dbConnection.Begin()
 
 		gl++
-		if gl == 15500 {
-			db.DbExec("VACUUM ANALYZE;", nil)
+		if gl == 15450 {
+			dbc.Exec("VACUUM ANALYZE;", nil)
 		}
 
 		if err != nil {
@@ -56,10 +58,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		dbConnection := db.GetLinkSql()
-
 		// dbConnection := db.GetLink()
-		dbc, err := dbConnection.Begin()
 
 		if err != nil {
 			fmt.Println("db.begin ", err.Error())

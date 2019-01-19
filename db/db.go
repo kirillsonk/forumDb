@@ -39,7 +39,6 @@ func InitDbSQL() (*sql.DB, error) {
 	return dbsql, nil
 }
 
-
 func InitDatabase() (*pgx.ConnPool, error) {
 	var err error
 	// dbInfo := fmt.Sprintf("user=%s "+
@@ -115,7 +114,6 @@ func DbExec(query string, args []interface{}) error {
 func GetLink() *pgx.ConnPool {
 	return db
 }
-
 
 func GetLinkSql() *sql.DB {
 	return dbsql
