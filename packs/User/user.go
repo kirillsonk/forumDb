@@ -1,7 +1,7 @@
 package User
 
 import (
-	"database/sql"
+	"fmt"
 	// "forumDb/db"
 	// "forumDb/models"
 	// "forumDb/packs/Errors"
@@ -13,7 +13,7 @@ import (
 	"github.com/kirillsonk/forumDb/packs/Errors"
 
 	"github.com/gorilla/mux"
-	"github.com/lib/pq"
+	pgx "github.com/jackc/pgx"
 )
 
 func GetUserByNick(nick string) (*models.User, error) {
@@ -21,7 +21,7 @@ func GetUserByNick(nick string) (*models.User, error) {
 		return nil, nil
 	}
 
-	var qrRow *sql.Row
+	var qrRow *pgx.Row
 
 	qrRow = db.DbQueryRow("SELECT about,email,fullname,nickname FROM Users WHERE nickname=$1", []interface{}{nick})
 	Usr := models.User{}
@@ -94,7 +94,7 @@ func UserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var qr string
-	var qrRow *sql.Row
+	var qrRow *pgx.Row
 
 	if about && email && fullName {
 		qr = "UPDATE Users SET about=$1, fullname=$2, email=$3 WHERE nickname=$4 RETURNING about,email,fullname,nickname"
@@ -122,17 +122,14 @@ func UserProfile(w http.ResponseWriter, r *http.Request) {
 	err = qrRow.Scan(&userUpdate.About, &userUpdate.Email, &userUpdate.Fullname, &userUpdate.Nickname)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			Errors.SendError("Can't find prifile with id "+usrNick, http.StatusNotFound, &w)
 			return
 		}
 
-		errorName := err.(*pq.Error).Code.Name()
+		Errors.SendError("Can't change prifile with id "+usrNick, http.StatusConflict, &w)
+		return
 
-		if errorName == "unique_violation" {
-			Errors.SendError("Can't change prifile with id "+usrNick, http.StatusConflict, &w)
-			return
-		}
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -162,7 +159,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	dbConn := db.GetLink()
 	dbc, err := dbConn.Begin()
 	if err != nil {
-		// fmt.Println("set local begin ", err.Error())
+		fmt.Println("set local begin ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -170,7 +167,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	_, err = dbc.Exec("SET LOCAL synchronous_commit TO OFF")
 
 	if err != nil {
-		// fmt.Println("db.begin ", err.Error())
+		fmt.Println("db.begin ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -183,15 +180,20 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		&Usr.Email, &Usr.Fullname, &Usr.Nickname)
 
 	if err != nil {
+		dbc.Rollback()
 		// fmt.Println(err.Error())
-		errorName := err.(*pq.Error).Code.Name()
+		// fmt.Println(err.(pgx.PgError).Message)
+		errorName := err.(pgx.PgError).Message
+		error1 := Errors.CheckDuplicateError("users_email_key")
+		error2 := Errors.CheckDuplicateError("users_nickname_key")
 
-		if errorName == "unique_violation" {
+		if errorName == error1 || errorName == error2 {
 			usrList := models.UserList{}
-
 			rows, err := db.DbQuery("SELECT * FROM Users WHERE nickname=$1 OR email=$2", []interface{}{Usr.Nickname, Usr.Email})
 
 			if err != nil {
+				fmt.Println("rows, err := db.DbQuery")
+				fmt.Println(err.Error())
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -201,6 +203,8 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 				err := rows.Scan(&usr.About, &usr.Email, &usr.Fullname, &usr.Nickname)
 
 				if err != nil {
+					fmt.Println("err := rows.Scan(&usr.About, &usr.Email, &usr.Fullname, &usr.Nickname)")
+					fmt.Println(err.Error())
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
@@ -213,12 +217,16 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 			w.Write(resData)
 			return
 		}
+		fmt.Println("w.Write(resData) return")
+		fmt.Println(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 
 	}
 	resData, err := Usr.MarshalJSON()
 	if err != nil {
+		fmt.Println("resData, err := Usr.MarshalJSON()")
+		fmt.Println(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

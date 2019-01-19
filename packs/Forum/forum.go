@@ -2,6 +2,7 @@ package Forum
 
 import (
 	"database/sql"
+	"fmt"
 	// "forumDb/db"
 	// "forumDb/models"
 	// "forumDb/packs/Errors"
@@ -15,7 +16,7 @@ import (
 	"github.com/kirillsonk/forumDb/packs/User"
 
 	"github.com/gorilla/mux"
-	"github.com/lib/pq"
+	pgx "github.com/jackc/pgx"
 )
 
 func UsersForum(w http.ResponseWriter, r *http.Request) { //+
@@ -41,12 +42,12 @@ func UsersForum(w http.ResponseWriter, r *http.Request) { //+
 		}
 
 		var err error
-		var rowsData *sql.Rows
+		var rowsData *pgx.Rows
 
 		vars := mux.Vars(r)
 		slug := vars["slug"]
 
-		ForumBySlug, _ := forumBySlugOrID(slug, nil)
+		ForumBySlug, _ := forumBySlugOrID(slug)
 
 		if ForumBySlug == nil {
 			Errors.SendError("Can't find forum with slug "+slug, http.StatusNotFound, &w)
@@ -107,7 +108,7 @@ func UsersForum(w http.ResponseWriter, r *http.Request) { //+
 			usrList = append(usrList, user)
 		}
 
-		defer rowsData.Close()
+		rowsData.Close()
 
 		resData, _ := usrList.MarshalJSON() //правильно easyjson
 		w.Write(resData)
@@ -142,7 +143,7 @@ func ThreadsForum(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		slug := vars["slug"]
 
-		var rowsData *sql.Rows
+		var rowsData *pgx.Rows
 
 		var err error
 
@@ -201,14 +202,14 @@ func ThreadsForum(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if flag == false {
-			ForumBySlug, _ := forumBySlugOrID(slug, nil)
+			ForumBySlug, _ := forumBySlugOrID(slug)
 			if ForumBySlug == nil {
 				Errors.SendError("Can't find forum with slug "+slug, http.StatusNotFound, &w)
 				return
 			}
 		}
 
-		defer rowsData.Close()
+		rowsData.Close()
 
 		resData, _ := threadList.MarshalJSON()
 		w.Write(resData)
@@ -218,7 +219,7 @@ func ThreadsForum(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func forumBySlugOrID(slugOrId string, t *sql.Tx) (*models.Forum, error) {
+func forumBySlugOrID(slugOrId string) (*models.Forum, error) {
 	Forum := models.Forum{}
 
 	var err error
@@ -234,7 +235,7 @@ func ForumDetails(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")
 	vars := mux.Vars(r)
 	slug := vars["slug"]
-	Forum, err := forumBySlugOrID(slug, nil)
+	Forum, err := forumBySlugOrID(slug)
 
 	if err != nil {
 		Errors.SendError("Can't find forum with slug "+slug, http.StatusNotFound, &w)
@@ -288,12 +289,16 @@ func CreateForum(w http.ResponseWriter, r *http.Request) {
 		err = row.Scan(&Forum.Posts, &Forum.Slug, &Forum.Threads, &Forum.Title, &Forum.User)
 
 		if err != nil {
-			errorName := err.(*pq.Error).Code.Name()
-			if errorName == "foreign_key_violation" {
+			t.Rollback()
+			fmt.Println(err.(pgx.PgError).Message)
+			error1 := Errors.CheckDuplicateError("forum_slug_key")
+			errorName := err.(pgx.PgError).Message
+			if errorName == "" {
 				Errors.SendError("Can't find user with name "+Forum.User, http.StatusNotFound, &w)
 				return
 			}
-			if errorName == "unique_violation" {
+			// duplicate key value violates unique constraint "forum_slug_key"
+			if errorName == error1 {
 				row := db.DbQueryRow("SELECT * FROM Forum WHERE slug=$1", []interface{}{Forum.Slug})
 				fr := models.Forum{}
 				err := row.Scan(&fr.Posts, &fr.Slug, &fr.Threads, &fr.Title, &fr.User)

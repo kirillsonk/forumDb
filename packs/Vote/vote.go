@@ -16,7 +16,6 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/lib/pq"
 )
 
 func VoteThread(w http.ResponseWriter, r *http.Request) {
@@ -72,10 +71,10 @@ func VoteThread(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err != nil {
-			if err.(*pq.Error).Code.Name() == "foreign_key_violation" {
-				Errors.SendError("Can't find user with id "+slugOrId, http.StatusNotFound, &w)
-				return
-			}
+			dbc.Rollback()
+			Errors.SendError("Can't find user with id "+slugOrId, http.StatusNotFound, &w)
+			return
+
 		}
 
 		dbc.Commit()

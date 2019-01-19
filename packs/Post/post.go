@@ -3,6 +3,9 @@ package Post
 import (
 	"database/sql"
 	"fmt"
+	"time"
+
+	pgx "github.com/jackc/pgx"
 
 	// "forumDb/db"
 	// "forumDb/models"
@@ -18,150 +21,294 @@ import (
 	"github.com/kirillsonk/forumDb/packs/Thread"
 
 	"github.com/gorilla/mux"
-	"github.com/lib/pq"
 )
 
+// func CreatePost(w http.ResponseWriter, r *http.Request) {
+// 	if r.Method == http.MethodPost {
+// 		w.Header().Set("content-type", "application/json")
+// 		vars := mux.Vars(r)
+// 		IdorSlug := vars["slug_or_id"]
+
+// 		body, err := ioutil.ReadAll(r.Body)
+// 		defer r.Body.Close()
+
+// 		if err != nil {
+// 			w.WriteHeader(http.StatusInternalServerError)
+// 			return
+// 		}
+
+// 		postList := models.PostList{}
+// 		err = postList.UnmarshalJSON(body)
+
+// 		if err != nil {
+// 			w.WriteHeader(http.StatusInternalServerError)
+// 			return
+// 		}
+// 		dbConnection := db.GetLink()
+// 		dbc, err := dbConnection.Begin()
+
+// 		if err != nil {
+// 			// fmt.Println("db.begin ", err.Error())
+// 			w.WriteHeader(http.StatusInternalServerError)
+// 			return
+// 		}
+
+// 		_, err = dbc.Exec("SET LOCAL synchronous_commit TO OFF")
+
+// 		if err != nil {
+// 			// fmt.Println("set local ", err.Error())
+// 			w.WriteHeader(http.StatusInternalServerError)
+// 			return
+// 		}
+
+// 		Thread, err := Thread.GetThreadByIdOrSlug(IdorSlug)
+
+// 		if err != nil {
+// 			Errors.SendError("Can't find thread with id "+IdorSlug, http.StatusNotFound, &w)
+// 			return
+// 		}
+
+// 		defer dbc.Rollback()
+// 		if len(postList) == 0 {
+// 			data := models.PostList{}
+// 			resData, err := data.MarshalJSON()
+
+// 			if err != nil {
+// 				w.WriteHeader(http.StatusInternalServerError)
+// 				return
+// 			}
+
+// 			w.WriteHeader(http.StatusCreated)
+// 			w.Write(resData)
+// 			return
+// 		}
+
+// 		responseQuery := "INSERT INTO Post(author, forum, message, parent, thread) VALUES "
+
+// 		UsersForumInsert := "INSERT INTO ForumUser(forum,author) VALUES "
+
+// 		var subQuery []string
+// 		var UsersForumSubQuery []string
+
+// 		for _, Post := range postList {
+
+// 			values := fmt.Sprintf("('%s', '%s', '%s', %d, %d) ", Post.Author, Thread.Forum, Post.Message, Post.Parent, Thread.Id)
+
+// 			subQuery = append(subQuery, values)
+// 			UsersForumValues := fmt.Sprintf("('%s', '%s') ", Thread.Forum, Post.Author)
+// 			UsersForumSubQuery = append(UsersForumSubQuery, UsersForumValues)
+// 		}
+
+// 		responseQuery += strings.Join(subQuery, ",") + " RETURNING author,created,forum,id,isedited,message,parent,thread;"
+
+// 		UsersForumInsert += strings.Join(UsersForumSubQuery, ",") + " ON CONFLICT DO NOTHING;"
+
+// 		responseQuery += UsersForumInsert
+// 		rows, err := dbc.QueryEx(responseQuery)
+
+// 		if err != nil {
+// 			dbc.Rollback()
+// 			fmt.Println(err.(pgx.PgError).Message)
+// 			errorName := err.(*pq.Error).Code.Name()
+
+// 			// fmt.Println(errorName)
+// 			if err.Error() == "pq: Parent Post exc" {
+// 				Errors.SendError("Parent Post was created in another thread", http.StatusConflict, &w)
+// 				return
+// 			}
+
+// 			if errorName == "foreign_key_violation" {
+// 				Errors.SendError("Can't find parent Post", http.StatusNotFound, &w)
+// 				return
+// 			}
+
+// 			if errorName != "syntax_error" {
+// 				Errors.SendError("Can't find parent Post", http.StatusConflict, &w)
+// 				return
+// 			}
+
+// 			w.WriteHeader(http.StatusInternalServerError)
+// 			return
+// 		}
+
+// 		// data := make([]models.Post, 0)
+// 		data := models.PostList{}
+
+// 		for rows.Next() {
+// 			addedPost := models.Post{}
+
+// 			err := rows.Scan(&addedPost.Author,
+// 				&addedPost.Created,
+// 				&addedPost.Forum,
+// 				&addedPost.Id,
+// 				&addedPost.IsEdited,
+// 				&addedPost.Message,
+// 				&addedPost.Parent,
+// 				&addedPost.Thread)
+
+// 			if err != nil {
+// 				w.WriteHeader(http.StatusInternalServerError)
+// 				return
+// 			}
+
+// 			data = append(data, addedPost)
+// 		}
+
+// 		resData, err := data.MarshalJSON()
+// 		if err != nil {
+// 			w.WriteHeader(http.StatusInternalServerError)
+// 			return
+// 		}
+// 		dbc.Commit()
+// 		w.WriteHeader(http.StatusCreated)
+// 		w.Write(resData)
+// 		return
+// 	}
+
+// 	return
+// }
+
 func CreatePost(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		w.Header().Set("content-type", "application/json")
-		vars := mux.Vars(r)
-		IdorSlug := vars["slug_or_id"]
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 
-		body, err := ioutil.ReadAll(r.Body)
-		defer r.Body.Close()
+	vars := mux.Vars(r)
+	slugOrId := vars["slug_or_id"]
+
+	body, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	posts := models.PostList{}
+	err = posts.UnmarshalJSON(body)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// data := make([]models.Post, 0)
+
+	// t, err := db.GetLink()
+	dbConnection := db.GetLink()
+	t, err := dbConnection.Begin()
+
+	if err != nil {
+		fmt.Println("db.begin ", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	_, err = t.Exec("SET LOCAL synchronous_commit TO OFF")
+
+	if err != nil {
+		fmt.Println("set local ", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	thr, err := Thread.GetThreadByIdOrSlug(slugOrId)
+
+	if err != nil {
+		Errors.SendError("Can't find thread with id "+slugOrId, http.StatusNotFound, &w)
+		return
+	}
+	//thr := new(models.Thread)
+	//thrId, err := strconv.Atoi(slugOrId)
+	//if err == nil {
+	//	thr.Id = int32(thrId)
+	//} else {
+	//	thr, err = getThread(slugOrId)
+	//
+	//	if err != nil{
+	//		Errors.sendError("Can't find thread with id " + slugOrId + "\n", 404, &w)
+	//		return
+	//	}
+	//
+	//}
+
+	defer t.Rollback()
+
+	var firstCreated time.Time
+	var count = 0
+	//var err error
+	// _, err = t.Prepare("name", "INSERT INTO Post(author, forum, message, parent, thread, created) VALUES ($1,$2,$3,$4,$5,$6) RETURNING author,created,forum,id,isedited,message,parent,thread")
+
+	if err != nil {
+		fmt.Println(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	postList := models.PostList{}
+	for _, p := range posts {
+		newPost := models.Post{}
+
+		if count == 0 { // Для того, чтобы все последующие добавления постов происхдили с той же датой и временем.
+			row := t.QueryRow("INSERT INTO Post(author, forum, message, parent, thread) VALUES ($1,$2,$3,$4,$5) RETURNING author,created,forum,id,isedited,message,parent,thread",
+				p.Author, thr.Forum, p.Message, p.Parent, thr.Id)
+			err = row.Scan(&newPost.Author, &newPost.Created, &newPost.Forum, &newPost.Id, &newPost.IsEdited, &newPost.Message,
+				&newPost.Parent, &newPost.Thread)
+
+			firstCreated = newPost.Created
+		} else {
+			row := t.QueryRow("INSERT INTO Post(author, forum, message, parent, thread, created) VALUES ($1,$2,$3,$4,$5,$6) RETURNING author,created,forum,id,isedited,message,parent,thread", p.Author, thr.Forum, p.Message, p.Parent, thr.Id, firstCreated)
+			err = row.Scan(&newPost.Author, &newPost.Created, &newPost.Forum, &newPost.Id, &newPost.IsEdited, &newPost.Message,
+				&newPost.Parent, &newPost.Thread)
+		}
 
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+			t.Rollback()
+			fmt.Println(err.Error())
+			errorName := err.(pgx.PgError).Message
 
-		postList := models.PostList{}
-		err = postList.UnmarshalJSON(body)
-
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		dbConnection := db.GetLink()
-		dbc, err := dbConnection.Begin()
-
-		if err != nil {
-			// fmt.Println("db.begin ", err.Error())
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		_, err = dbc.Exec("SET LOCAL synchronous_commit TO OFF")
-
-		if err != nil {
-			// fmt.Println("set local ", err.Error())
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		Thread, err := Thread.GetThreadByIdOrSlug(IdorSlug)
-
-		if err != nil {
-			Errors.SendError("Can't find thread with id "+IdorSlug, http.StatusNotFound, &w)
-			return
-		}
-
-		defer dbc.Rollback()
-		if len(postList) == 0 {
-			data := models.PostList{}
-			resData, err := data.MarshalJSON()
-
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			w.WriteHeader(http.StatusCreated)
-			w.Write(resData)
-			return
-		}
-
-		responseQuery := "INSERT INTO Post(author, forum, message, parent, thread) VALUES "
-
-		UsersForumInsert := "INSERT INTO ForumUser(forum,author) VALUES "
-
-		var subQuery []string
-		var UsersForumSubQuery []string
-
-		for _, Post := range postList {
-
-			values := fmt.Sprintf("('%s', '%s', '%s', %d, %d) ", Post.Author, Thread.Forum, Post.Message, Post.Parent, Thread.Id)
-
-			subQuery = append(subQuery, values)
-			UsersForumValues := fmt.Sprintf("('%s', '%s') ", Thread.Forum, Post.Author)
-			UsersForumSubQuery = append(UsersForumSubQuery, UsersForumValues)
-		}
-
-		responseQuery += strings.Join(subQuery, ",") + " RETURNING author,created,forum,id,isedited,message,parent,thread;"
-
-		UsersForumInsert += strings.Join(UsersForumSubQuery, ",") + " ON CONFLICT DO NOTHING;"
-
-		responseQuery += UsersForumInsert
-		rows, err := dbc.Query(responseQuery)
-
-		if err != nil {
-			errorName := err.(*pq.Error).Code.Name()
-
-			// fmt.Println(errorName)
-			if err.Error() == "pq: Parent Post exc" {
-				Errors.SendError("Parent Post was created in another thread", http.StatusConflict, &w)
+			fmt.Println(errorName)
+			if errorName == "Parent post exc" {
+				Errors.SendError("Parent post was created in another thread", http.StatusConflict, &w)
 				return
 			}
 
 			if errorName == "foreign_key_violation" {
-				Errors.SendError("Can't find parent Post", http.StatusNotFound, &w)
+				Errors.SendError("Can't find parent post", http.StatusNotFound, &w)
 				return
 			}
 
-			if errorName != "syntax_error" {
-				Errors.SendError("Can't find parent Post", http.StatusConflict, &w)
-				return
-			}
-
-			w.WriteHeader(http.StatusInternalServerError)
+			Errors.SendError("Can't find parent post", http.StatusNotFound, &w)
 			return
 		}
 
-		// data := make([]models.Post, 0)
-		data := models.PostList{}
+		_, err := t.Exec("INSERT INTO ForumUser(forum,author) VALUES ($1,$2) ON CONFLICT DO NOTHING", thr.Forum, p.Author)
 
-		for rows.Next() {
-			addedPost := models.Post{}
-
-			err := rows.Scan(&addedPost.Author,
-				&addedPost.Created,
-				&addedPost.Forum,
-				&addedPost.Id,
-				&addedPost.IsEdited,
-				&addedPost.Message,
-				&addedPost.Parent,
-				&addedPost.Thread)
-
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			data = append(data, addedPost)
-		}
-
-		resData, err := data.MarshalJSON()
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
+			fmt.Println("postCreate insert ForumUsers ", err.Error())
 		}
-		dbc.Commit()
-		w.WriteHeader(http.StatusCreated)
-		w.Write(resData)
+
+		postList = append(postList, newPost)
+		count++
+	}
+
+	resData, err := postList.MarshalJSON()
+	// resp, err := json.Marshal(data)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
+	t.Commit()
+
+	w.Header().Set("content-type", "application/json")
+
+	w.WriteHeader(http.StatusCreated)
+	w.Write(resData)
+
 	return
+
 }
 
 func PostDetails(w http.ResponseWriter, r *http.Request) {

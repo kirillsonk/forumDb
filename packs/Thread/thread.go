@@ -2,6 +2,7 @@ package Thread
 
 import (
 	"database/sql"
+	"fmt"
 	// "forumDb/db"
 	// "forumDb/models"
 	// "forumDb/packs/Errors"
@@ -14,7 +15,7 @@ import (
 	"github.com/kirillsonk/forumDb/packs/Errors"
 
 	"github.com/gorilla/mux"
-	"github.com/lib/pq"
+	pgx "github.com/jackc/pgx"
 )
 
 func PostsThread(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +53,7 @@ func PostsThread(w http.ResponseWriter, r *http.Request) {
 		sortValue = "flat"
 	}
 
-	var rows *sql.Rows
+	var rows *pgx.Rows
 
 	if sortValue == "flat" {
 		if dsc {
@@ -130,8 +131,6 @@ func PostsThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer rows.Close()
-
 	var i = 0
 	postList := models.PostList{}
 	for rows.Next() {
@@ -147,7 +146,7 @@ func PostsThread(w http.ResponseWriter, r *http.Request) {
 		postList = append(postList, post)
 	}
 
-	defer rows.Close()
+	rows.Close()
 
 	resData, _ := postList.MarshalJSON()
 	w.Write(resData)
@@ -199,7 +198,7 @@ func ThreadDetails(w http.ResponseWriter, r *http.Request) {
 			add = ","
 		}
 
-		var row *sql.Row
+		var row *pgx.Row
 
 		thrId, err := strconv.Atoi(slugOrId)
 
@@ -238,7 +237,7 @@ func ThreadDetails(w http.ResponseWriter, r *http.Request) {
 
 func GetThreadByIdOrSlug(slug string) (*models.Thread, error) {
 	thrId, err := strconv.Atoi(slug)
-	var row *sql.Row
+	var row *pgx.Row
 
 	if err != nil {
 		row = db.DbQueryRow("SELECT * FROM Thread WHERE slug=$1;", []interface{}{slug})
@@ -301,7 +300,7 @@ func ThreadCreate(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	slug := params["slug"]
 
-	var row *sql.Row
+	var row *pgx.Row
 	if Thread.Slug == "" {
 		row = dbc.QueryRow("INSERT INTO Thread(author, created, forum, message, title) VALUES ($1, $2, "+
 			"(SELECT slug FROM Forum WHERE slug=$3), $4, $5) RETURNING *", Thread.Author, Thread.Created, slug,
@@ -317,20 +316,22 @@ func ThreadCreate(w http.ResponseWriter, r *http.Request) {
 	err = row.Scan(&addedThread.Id, &addedThread.Author, &addedThread.Created, &addedThread.Forum, &addedThread.Message, &sqlSlug, &addedThread.Title, &addedThread.Votes)
 
 	if err != nil {
+		dbc.Rollback()
 		// fmt.Println(err.Error())
-		errorName := err.(*pq.Error).Code.Name()
+		// errorName := err.(*pq.Error).Code
+		fmt.Println(err.(pgx.PgError).Message)
+		errorName := err.(pgx.PgError).Message
 
-		if errorName == "foreign_key_violation" || errorName == "not_null_violation" {
-			Errors.SendError("Can't find forum or usr", http.StatusNotFound, &w)
-			return
-		}
-
-		if errorName == "unique_violation" {
+		error1 := Errors.CheckDuplicateError("thread_slug_key")
+		if errorName == error1 {
 			existThread, _ := GetThreadByIdOrSlug(Thread.Slug)
 
 			w.WriteHeader(http.StatusConflict)
 			resData, _ := existThread.MarshalJSON()
 			w.Write(resData)
+			return
+		} else {
+			Errors.SendError("Can't find forum or usr", http.StatusNotFound, &w)
 			return
 		}
 		return
