@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"io/ioutil"
 
 	pgx "github.com/jackc/pgx"
 )
@@ -39,12 +40,12 @@ func InitDatabase() (*pgx.ConnPool, error) {
 		panic(err)
 	}
 
-	// init, err := ioutil.ReadFile("db/tables.sql")
-	// _, err = db.Exec(string(init))
+	init, err := ioutil.ReadFile("db/tables.sql")
+	_, err = db.Exec(string(init))
 
-	// if err != nil {
-	// 	panic(err)
-	// }
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Println("Connected to database")
 	return db, nil
