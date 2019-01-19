@@ -12,7 +12,7 @@ USER postgres
 RUN /etc/init.d/postgresql start &&\
     psql --command "CREATE USER docker WITH SUPERUSER PASSWORD 'docker';" &&\
     createdb -O docker docker &&\
-    psql docker -f ./db/tables.sql &&\
+    # psql docker -f db/tables.sql &&\
     /etc/init.d/postgresql stop
 
 USER postgres
@@ -49,4 +49,4 @@ ADD . $GOPATH/src/github.com/kirillsonk/forumDb
 
 USER postgres
 
-CMD service postgresql start && go run cmd/main.go
+CMD service postgresql start && psql -f ./db/tables.sql docker && go run cmd/main.go
