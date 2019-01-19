@@ -33,6 +33,7 @@ USER root
 RUN go get github.com/gorilla/mux
 RUN go get github.com/lib/pq
 RUN go get github.com/mailru/easyjson
+RUN go get github.com/jackc/pgx
 
 WORKDIR $GOPATH/src/github.com/kirillsonk/forumDb
 ADD . $GOPATH/src/github.com/kirillsonk/forumDb
