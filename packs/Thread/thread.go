@@ -15,7 +15,7 @@ import (
 	"github.com/kirillsonk/forumDb/packs/Errors"
 
 	"github.com/gorilla/mux"
-	pgx "github.com/jackc/pgx"
+	"github.com/jackc/pgx"
 )
 
 func PostsThread(w http.ResponseWriter, r *http.Request) {

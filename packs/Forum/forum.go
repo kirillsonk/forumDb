@@ -17,7 +17,7 @@ import (
 	"github.com/kirillsonk/forumDb/packs/User"
 
 	"github.com/gorilla/mux"
-	pgx "github.com/jackc/pgx"
+	"github.com/jackc/pgx"
 )
 
 func UsersForum(w http.ResponseWriter, r *http.Request) { //+

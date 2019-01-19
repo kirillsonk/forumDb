@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	pgx "github.com/jackc/pgx"
+	"github.com/jackc/pgx"
 
 	// "forumDb/db"
 	// "forumDb/models"

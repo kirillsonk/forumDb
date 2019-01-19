@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	pgx "github.com/jackc/pgx"
+	"github.com/jackc/pgx"
 )
 
 const (

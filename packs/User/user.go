@@ -13,7 +13,7 @@ import (
 	"github.com/kirillsonk/forumDb/packs/Errors"
 
 	"github.com/gorilla/mux"
-	pgx "github.com/jackc/pgx"
+	"github.com/jackc/pgx"
 )
 
 func GetUserByNick(nick string) (*models.User, error) {
@@ -181,7 +181,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		dbc.Rollback()
-		// fmt.Println(err.Error())
+		fmt.Println(err.Error())
 		// fmt.Println(err.(pgx.PgError).Message)
 		errorName := err.(pgx.PgError).Message
 		error1 := Errors.CheckDuplicateError("users_email_key")
