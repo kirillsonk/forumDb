@@ -181,7 +181,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		dbc.Rollback()
-		fmt.Println(err.Error())
+		fmt.Println(err)
 		// fmt.Println(err.(pgx.PgError).Message)
 		errorName := err.(pgx.PgError).Message
 		error1 := Errors.CheckDuplicateError("users_email_key")
