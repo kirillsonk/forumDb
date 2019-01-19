@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 
-MAINTAINER kirillsonk
+# MAINTAINER kirillsonk
 
 RUN apt-get -y update
 ENV PGVER 10
@@ -26,7 +26,7 @@ RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf
 
 EXPOSE 5000
 
-# VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
+VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 
 USER root
 
