@@ -3,6 +3,8 @@ package db
 import (
 	"fmt"
 
+	"database/sql"
+
 	"github.com/jackc/pgx"
 )
 
@@ -17,6 +19,26 @@ const (
 
 // var db *pgx.Conn
 var db *pgx.ConnPool
+var dbsql *sql.DB
+
+func InitDbSQL() (*sql.DB, error) {
+	var err error
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
+		user, password, dbname)
+	dbsql, err = sql.Open("postgres", dbinfo)
+	if err != nil {
+		panic(err)
+	}
+
+	if err = dbsql.Ping(); err != nil {
+		panic(err)
+	}
+
+	fmt.Println("You connected to your database.")
+
+	return dbsql, nil
+}
+
 
 func InitDatabase() (*pgx.ConnPool, error) {
 	var err error
@@ -92,4 +114,9 @@ func DbExec(query string, args []interface{}) error {
 
 func GetLink() *pgx.ConnPool {
 	return db
+}
+
+
+func GetLinkSql() *sql.DB {
+	return dbsql
 }

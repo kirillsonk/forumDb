@@ -8,7 +8,7 @@ require (
 	github.com/jackc/pgx v3.3.0+incompatible
 	github.com/kirillsonk/forumDb v0.0.0-20190119155435-70ef31708a3f
 	github.com/kr/pretty v0.1.0 // indirect
-	github.com/lib/pq v1.0.0 // indirect
+	github.com/lib/pq v1.0.0
 	github.com/mailru/easyjson v0.0.0-20180823135443-60711f1a8329
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect

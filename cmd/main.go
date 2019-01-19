@@ -24,6 +24,9 @@ import (
 
 func main() {
 	postgres, _ := db.InitDatabase()
+	
+	dbConnection, _ := db.InitDbSQL()
+
 	router := mux.NewRouter()
 
 	router.HandleFunc(`/api/user/{nickname}/create`, User.CreateUser)
@@ -45,6 +48,6 @@ func main() {
 	http.ListenAndServe(":5000", nil)
 
 	defer postgres.Close()
-
+	defer dbConnection.Close()
 	return
 }
