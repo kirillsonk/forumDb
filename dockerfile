@@ -1,5 +1,7 @@
 FROM ubuntu:18.04
 
+MAINTAINER kirillsonk
+
 RUN apt-get -y update
 ENV PGVER 10
 RUN apt-get install -y postgresql-$PGVER
@@ -16,8 +18,11 @@ USER postgres
 
 RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/$PGVER/main/pg_hba.conf
 RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf
+# RUN echo "synchronous_commit = off" >> /etc/postgresql/$PGVER/main/postgresql.conf
 
 EXPOSE 5000
+
+VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 
 USER root
 

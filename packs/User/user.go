@@ -156,15 +156,15 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbConn := db.GetLink()
-	dbc, err := dbConn.Begin()
+	// dbConn := db.GetLink()
+	// dbc, err := dbConn.Begin()
 	if err != nil {
 		fmt.Println("set local begin ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	_, err = dbc.Exec("SET LOCAL synchronous_commit TO OFF")
+	// _, err = dbc.Exec("SET LOCAL synchronous_commit TO OFF")
 
 	if err != nil {
 		fmt.Println("db.begin ", err.Error())
@@ -172,16 +172,16 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer dbc.Rollback()
+	// defer dbc.Rollback()
 
 	qr := "INSERT INTO Users (about, email, fullname, nickname) VALUES ($1,$2,$3,$4) RETURNING *"
 
-	err = dbc.QueryRow(qr, Usr.About, Usr.Email, Usr.Fullname, Usr.Nickname).Scan(&Usr.About,
+	err = db.DbQueryRow(qr, []interface{}{Usr.About, Usr.Email, Usr.Fullname, Usr.Nickname}).Scan(&Usr.About,
 		&Usr.Email, &Usr.Fullname, &Usr.Nickname)
 
 	if err != nil {
 		// dbc.Rollback()
-		fmt.Println(err)
+		fmt.Println()
 		fmt.Println(err.Error())
 		// fmt.Println(err.(pgx.PgError).Message)
 		errorName := err.(pgx.PgError).Message
@@ -232,7 +232,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbc.Commit()
+	// dbc.Commit()
 	w.WriteHeader(http.StatusCreated)
 	w.Write(resData)
 	return
