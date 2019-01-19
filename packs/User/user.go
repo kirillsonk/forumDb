@@ -174,13 +174,13 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	defer dbc.Rollback()
 
-	qr := "INSERT INTO Users(about, email, fullname, nickname) VALUES ($1,$2,$3,$4) RETURNING *"
+	qr := "INSERT INTO Users (about, email, fullname, nickname) VALUES ($1,$2,$3,$4) RETURNING *"
 
 	err = dbc.QueryRow(qr, Usr.About, Usr.Email, Usr.Fullname, Usr.Nickname).Scan(&Usr.About,
 		&Usr.Email, &Usr.Fullname, &Usr.Nickname)
 
 	if err != nil {
-		dbc.Rollback()
+		// dbc.Rollback()
 		fmt.Println(err)
 		fmt.Println(err.Error())
 		// fmt.Println(err.(pgx.PgError).Message)
