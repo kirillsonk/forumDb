@@ -33,17 +33,23 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
 		dbConnection := db.GetLinkSql()
-		dbc, err := dbConnection.Begin()
 
 		gl++
-		if gl == 15450 {
-			dbc.Exec("VACUUM ANALYZE;", nil)
+		// fmt.Println(gl)
+		if gl == 15499 {
+			fmt.Println("VACUUM START;")
+			_, err = dbConnection.Exec("VACUUM ANALYZE;")
 		}
 
 		if err != nil {
+			fmt.Println(err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		dbc, err := dbConnection.Begin()
+
+
 
 		postList := models.PostList{}
 		err = postList.UnmarshalJSON(body)
@@ -180,143 +186,6 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	return
 }
-
-// func CreatePost(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodPost {
-// 		w.WriteHeader(http.StatusMethodNotAllowed)
-// 		return
-// 	}
-
-// gl++
-// //fmt.Println(globalCount)
-
-// if gl == 15500 {
-// 	db.DbExec("VACUUM ANALYZE;", nil)
-// }
-
-// 	vars := mux.Vars(r)
-// 	slugOrId := vars["slug_or_id"]
-
-// 	body, err := ioutil.ReadAll(r.Body)
-// 	defer r.Body.Close()
-
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	posts := models.PostList{}
-// 	err = posts.UnmarshalJSON(body)
-
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	// data := make([]models.Post, 0)
-
-// 	// t, err := db.GetLink()
-// 	dbConnection := db.GetLink()
-// 	t, err := dbConnection.Begin()
-
-// 	if err != nil {
-// 		fmt.Println("db.begin ", err.Error())
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	_, err = t.Exec("SET LOCAL synchronous_commit TO OFF")
-
-// 	if err != nil {
-// 		fmt.Println("set local ", err.Error())
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		return
-// 	}
-// 	thr, err := Thread.GetThreadByIdOrSlug(slugOrId)
-
-// 	if err != nil {
-// 		Errors.SendError("Can't find thread with id "+slugOrId, http.StatusNotFound, &w)
-// 		return
-// 	}
-
-// 	defer t.Rollback()
-
-// 	var firstCreated time.Time
-// 	var count = 0
-// 	//var err error
-// 	// _, err = t.Prepare("name", "INSERT INTO Post(author, forum, message, parent, thread, created) VALUES ($1,$2,$3,$4,$5,$6) RETURNING author,created,forum,id,isedited,message,parent,thread")
-
-// 	if err != nil {
-// 		fmt.Println(err.Error())
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	postList := models.PostList{}
-// 	for _, p := range posts {
-// 		newPost := models.Post{}
-
-// 		if count == 0 { // Для того, чтобы все последующие добавления постов происхдили с той же датой и временем.
-// 			row := t.QueryRow("INSERT INTO Post(author, forum, message, parent, thread) VALUES ($1,$2,$3,$4,$5) RETURNING author,created,forum,id,isedited,message,parent,thread",
-// 				p.Author, thr.Forum, p.Message, p.Parent, thr.Id)
-// 			err = row.Scan(&newPost.Author, &newPost.Created, &newPost.Forum, &newPost.Id, &newPost.IsEdited, &newPost.Message,
-// 				&newPost.Parent, &newPost.Thread)
-
-// 			firstCreated = newPost.Created
-// 		} else {
-// 			row := t.QueryRow("INSERT INTO Post(author, forum, message, parent, thread, created) VALUES ($1,$2,$3,$4,$5,$6) RETURNING author,created,forum,id,isedited,message,parent,thread", p.Author, thr.Forum, p.Message, p.Parent, thr.Id, firstCreated)
-// 			err = row.Scan(&newPost.Author, &newPost.Created, &newPost.Forum, &newPost.Id, &newPost.IsEdited, &newPost.Message,
-// 				&newPost.Parent, &newPost.Thread)
-// 		}
-
-// 		if err != nil {
-// 			t.Rollback()
-// 			fmt.Println(err.Error())
-// 			errorName := err.(pgx.PgError).Message
-
-// 			fmt.Println(errorName)
-// 			if errorName == "Parent post exc" {
-// 				Errors.SendError("Parent post was created in another thread", http.StatusConflict, &w)
-// 				return
-// 			}
-
-// 			if errorName == "foreign_key_violation" {
-// 				Errors.SendError("Can't find parent post", http.StatusNotFound, &w)
-// 				return
-// 			}
-
-// 			Errors.SendError("Can't find parent post", http.StatusNotFound, &w)
-// 			return
-// 		}
-
-// 		_, err := t.Exec("INSERT INTO ForumUser(forum,author) VALUES ($1,$2) ON CONFLICT DO NOTHING", thr.Forum, p.Author)
-
-// 		if err != nil {
-// 			fmt.Println("postCreate insert ForumUsers ", err.Error())
-// 		}
-
-// 		postList = append(postList, newPost)
-// 		count++
-// 	}
-
-// 	resData, err := postList.MarshalJSON()
-// 	// resp, err := json.Marshal(data)
-
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	t.Commit()
-
-// 	w.Header().Set("content-type", "application/json")
-
-// 	w.WriteHeader(http.StatusCreated)
-// 	w.Write(resData)
-
-// 	return
-
-// }
 
 func PostDetails(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")
