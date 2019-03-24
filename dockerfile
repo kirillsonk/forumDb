@@ -50,4 +50,4 @@ ADD . $GOPATH/src/github.com/kirillsonk/forumDb
 # USER postgres
 
 # CMD service postgresql start && psql -f ./db/tables.sql docker && go run cmd/main.go
-CMD go run cmd/main.go
+CMD go run cmd/main.go && ./tech-db-forum func

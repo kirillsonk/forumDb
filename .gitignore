@@ -1,5 +1,5 @@
 *.DS_Store
-tech-db-forum
+# tech-db-forum
 tech-db-forum.dat.gz
 report.html
 .tech-db-forum.dat.gz.icloud
