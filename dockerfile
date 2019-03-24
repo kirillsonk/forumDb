@@ -7,15 +7,15 @@ ENV PGVER 10
 RUN apt-get install -y postgresql-$PGVER
 RUN apt install -y golang-1.10 git
 
-USER postgres
+# USER postgres
 
-RUN /etc/init.d/postgresql start &&\
-    psql --command "CREATE USER docker WITH SUPERUSER PASSWORD 'docker';" &&\
-    createdb -O docker docker &&\
-    # psql docker -f db/tables.sql &&\
-    /etc/init.d/postgresql stop
+# RUN /etc/init.d/postgresql start &&\
+#     psql --command "CREATE USER docker WITH SUPERUSER PASSWORD 'docker';" &&\
+#     createdb -O docker docker &&\
+#     # psql docker -f db/tables.sql &&\
+#     /etc/init.d/postgresql stop
 
-USER postgres
+# USER postgres
 
 RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/$PGVER/main/pg_hba.conf
 RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf
@@ -26,7 +26,7 @@ RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf
 
 EXPOSE 5000
 
-VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
+# VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 
 USER root
 
@@ -47,6 +47,7 @@ RUN go get github.com/mailru/easyjson
 WORKDIR $GOPATH/src/github.com/kirillsonk/forumDb
 ADD . $GOPATH/src/github.com/kirillsonk/forumDb
 
-USER postgres
+# USER postgres
 
-CMD service postgresql start && psql -f ./db/tables.sql docker && go run cmd/main.go
+# CMD service postgresql start && psql -f ./db/tables.sql docker && go run cmd/main.go
+CMD go run cmd/main.go
