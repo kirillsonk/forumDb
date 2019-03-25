@@ -14,7 +14,7 @@ const (
 	// dbname   = "forumdb"
 	user     = "postgres"
 	password = "root"
-	dbname   = "root"
+	dbname   = "postgres"
 )
 
 // var db *pgx.Conn
@@ -23,7 +23,7 @@ var dbsql *sql.DB
 
 func InitDbSQL() (*sql.DB, error) {
 	var err error
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=enable",
 		user, password, dbname)
 	dbsql, err = sql.Open("postgres", dbinfo)
 	if err != nil {
