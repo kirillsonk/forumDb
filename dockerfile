@@ -46,4 +46,5 @@ ADD . $GOPATH/src/github.com/kirillsonk/forumDb
 USER postgres
 
 # CMD service postgresql start && psql -f ./db/tables.sql docker && go run cmd/main.go
-CMD service postgresql start && go run cmd/main.go && ./tech-db-forum func -u http://localhost:5000/api
+CMD service postgresql start && go run cmd/main.go
+# CMD ./tech-db-forum func -u http://localhost:5000/api
