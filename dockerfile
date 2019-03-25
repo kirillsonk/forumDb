@@ -15,14 +15,10 @@ RUN apt install -y golang-1.10 git
 #     # psql docker -f db/tables.sql &&\
 #     /etc/init.d/postgresql stop
 
-# USER postgres
+USER postgres
 
 RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/$PGVER/main/pg_hba.conf
 RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf
-# RUN echo "shared_buffers = 512MB" >> /etc/postgresql/$PGVER/main/postgresql.conf
-# RUN echo "autovacuum = off" >> /etc/postgresql/$PGVER/main/postgresql.conf
-# RUN echo "max_connections = 100" >> /etc/postgresql/$PGVER/main/postgresql.conf
-# RUN echo "synchronous_commit = off" >> /etc/postgresql/$PGVER/main/postgresql.conf
 
 EXPOSE 5000
 
@@ -47,7 +43,7 @@ RUN go get github.com/mailru/easyjson
 WORKDIR $GOPATH/src/github.com/kirillsonk/forumDb
 ADD . $GOPATH/src/github.com/kirillsonk/forumDb
 
-# USER postgres
+USER postgres
 
 # CMD service postgresql start && psql -f ./db/tables.sql docker && go run cmd/main.go
-CMD go run cmd/main.go && ./tech-db-forum func
+CMD service postgresql start && go run cmd/main.go && ./tech-db-forum func -u http://localhost:5000/api

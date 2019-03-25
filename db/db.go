@@ -12,9 +12,9 @@ const (
 	// user     = "Sonk"
 	// password = "k123"
 	// dbname   = "forumdb"
-	user     = "root"
+	user     = "postgres"
 	password = "root"
-	dbname   = "main"
+	dbname   = "root"
 )
 
 // var db *pgx.Conn
@@ -48,7 +48,7 @@ func InitDatabase() (*pgx.ConnPool, error) {
 		User:     user,
 		Password: password,
 		// Host:     "localhost",
-		Host:     "35.204.223.248",
+		Host:     "35.228.7.66",
 		Port:     5432,
 		Database: dbname,
 	}
