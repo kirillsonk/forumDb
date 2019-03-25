@@ -12,9 +12,10 @@ const (
 	// user     = "Sonk"
 	// password = "k123"
 	// dbname   = "forumdb"
+	host     = "35.228.7.66"
 	user     = "postgres"
 	password = "root"
-	dbname   = "postgres"
+	dbname   = "root"
 )
 
 // var db *pgx.Conn
@@ -23,8 +24,8 @@ var dbsql *sql.DB
 
 func InitDbSQL() (*sql.DB, error) {
 	var err error
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s",
-		user, password, dbname)
+	dbinfo := fmt.Sprintf("host=%s user=%s password=%s dbname=%s",
+		host, user, password, dbname)
 	dbsql, err = sql.Open("postgres", dbinfo)
 	if err != nil {
 		panic(err)
