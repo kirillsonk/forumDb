@@ -28,7 +28,6 @@ import (
 
 func AccessLogMiddleware (mux *mux.Router,) http.HandlerFunc   {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		begin := time.Now()
 
 		mux.ServeHTTP(w, r)
 
