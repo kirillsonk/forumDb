@@ -19,8 +19,58 @@ import (
 	"github.com/kirillsonk/forumDb/packs/User"
 	"github.com/kirillsonk/forumDb/packs/Vote"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/gorilla/mux"
 )
+
+
+func AccessLogMiddleware (mux *mux.Router,) http.HandlerFunc   {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		begin := time.Now()
+
+		mux.ServeHTTP(w, r)
+
+		HitStat.With(prometheus.Labels{
+			"url":    r.URL.Path,
+			"method": r.Method,
+			"code":   w.Header().Get("Status-Code"),
+		}).Inc()
+
+		rps.Add(1)
+	})
+}
+
+var (
+	HitStat = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "ForumsApi",
+			Subsystem: "hit_stat",
+			Name:      "HitStat",
+			Help:      "Hit info.",
+		},
+		[]string{
+			"url",
+			"method",
+			"code",
+		},
+	)
+
+	rps =prometheus.NewCounter(
+		prometheus.CounterOpts{
+		  Name: "rps",
+		})
+	)
+	
+
+func init() {
+	// Metrics have to be registered to be exposed:
+	prometheus.MustRegister(HitStat)
+	prometheus.MustRegister(rps)
+
+}
+
 
 func main() {
 	postgres, _ := db.InitDatabase()
@@ -28,6 +78,8 @@ func main() {
 	dbConnection, _ := db.InitDbSQL()
 
 	router := mux.NewRouter()
+
+	http.Handle("/metrics", promhttp.Handler())
 
 	router.HandleFunc(`/api/user/{nickname}/create`, User.CreateUser)
 	router.HandleFunc(`/api/user/{nickname}/profile`, User.UserProfile)
@@ -44,8 +96,11 @@ func main() {
 	router.HandleFunc(`/api/thread/{slug_or_id}/posts`, Thread.PostsThread)
 	router.HandleFunc(`/api/thread/{slug_or_id}/vote`, Vote.VoteThread)
 
-	http.Handle("/", router)
+	siteHandler := AccessLogMiddleware(router)
+
+	http.Handle("/", siteHandler)
 	http.ListenAndServe(":5000", nil)
+
 
 	defer postgres.Close()
 	defer dbConnection.Close()

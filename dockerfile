@@ -39,6 +39,8 @@ RUN go get github.com/gorilla/mux
 RUN go get github.com/lib/pq
 RUN go get github.com/jackc/pgx
 RUN go get github.com/mailru/easyjson
+RUN go get github.com/prometheus/client_golang/prometheus
+RUN go get github.com/prometheus/client_golang/prometheus/promhttp
 
 WORKDIR $GOPATH/src/github.com/kirillsonk/forumDb
 ADD . $GOPATH/src/github.com/kirillsonk/forumDb
